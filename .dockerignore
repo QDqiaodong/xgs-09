@@ -1,0 +1,17 @@
+**/node_modules
+**/dist
+**/target
+**/.mvn
+**/.git
+**/.gitignore
+**/.DS_Store
+**/*.log
+**/logs
+**/tmp
+**/temp
+**/coverage
+**/screenshots
+**/.cache
+**/.vscode
+**/.idea
+**/uploads

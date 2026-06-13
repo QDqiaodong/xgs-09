@@ -1,0 +1,62 @@
+package com.journal.inspiration.controller;
+
+import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.journal.inspiration.common.Result;
+import com.journal.inspiration.dto.WorkPublishDTO;
+import com.journal.inspiration.dto.WorkQueryDTO;
+import com.journal.inspiration.service.JournalWorkService;
+import com.journal.inspiration.vo.WorkVO;
+import lombok.RequiredArgsConstructor;
+import org.springframework.web.bind.annotation.*;
+
+@RestController
+@RequestMapping("/works")
+@RequiredArgsConstructor
+public class JournalWorkController {
+
+    private final JournalWorkService workService;
+
+    @PostMapping
+    public Result<Long> publish(@RequestBody WorkPublishDTO dto) {
+        Long id = workService.publishWork(dto);
+        return Result.success(id);
+    }
+
+    @GetMapping("/{id}")
+    public Result<WorkVO> detail(@PathVariable Long id, @RequestParam(required = false) Long userId) {
+        WorkVO vo = workService.getWorkDetail(id, userId);
+        if (vo != null) {
+            workService.incrementViewCount(id);
+        }
+        return Result.success(vo);
+    }
+
+    @GetMapping("/list")
+    public Result<Page<WorkVO>> list(WorkQueryDTO dto) {
+        return Result.success(workService.getWorkList(dto));
+    }
+
+    @GetMapping("/latest")
+    public Result<Page<WorkVO>> latest(@RequestParam(defaultValue = "1") Integer pageNum,
+                                       @RequestParam(defaultValue = "10") Integer pageSize) {
+        return Result.success(workService.getLatestWorks(pageNum, pageSize));
+    }
+
+    @GetMapping("/hot")
+    public Result<Page<WorkVO>> hot(@RequestParam(defaultValue = "1") Integer pageNum,
+                                    @RequestParam(defaultValue = "10") Integer pageSize) {
+        return Result.success(workService.getHotWorks(pageNum, pageSize));
+    }
+
+    @GetMapping("/user/{userId}")
+    public Result<Page<WorkVO>> userWorks(@PathVariable Long userId,
+                                          @RequestParam(defaultValue = "1") Integer pageNum,
+                                          @RequestParam(defaultValue = "10") Integer pageSize) {
+        return Result.success(workService.getUserWorks(userId, pageNum, pageSize));
+    }
+
+    @PutMapping("/{id}/status")
+    public Result<Boolean> updateStatus(@PathVariable Long id, @RequestParam Integer status) {
+        return Result.success(workService.updateWorkStatus(id, status));
+    }
+}

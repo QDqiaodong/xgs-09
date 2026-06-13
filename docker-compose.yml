@@ -1,0 +1,101 @@
+services:
+  mysql:
+    image: ${DOCKER_REGISTRY:+${DOCKER_REGISTRY}/}mysql:8.0
+    container_name: ${COMPOSE_PROJECT_NAME}-mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      TZ: Asia/Shanghai
+    ports:
+      - "127.0.0.1:${MYSQL_PORT}:3306"
+    volumes:
+      - journal-mysql-data:/var/lib/mysql
+      - ./mysql/init.sql:/docker-entrypoint-initdb.d/init.sql
+    command:
+      - --character-set-server=utf8mb4
+      - --collation-server=utf8mb4_unicode_ci
+      - --skip-log-bin
+    networks:
+      - journal-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u${MYSQL_USER}", "-p${MYSQL_ROOT_PASSWORD}"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: ${DOCKER_REGISTRY:+${DOCKER_REGISTRY}/}redis:7-alpine
+    container_name: ${COMPOSE_PROJECT_NAME}-redis
+    restart: always
+    ports:
+      - "127.0.0.1:${REDIS_PORT}:6379"
+    volumes:
+      - journal-redis-data:/data
+    command: redis-server --appendonly yes
+    networks:
+      - journal-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+      args:
+        DOCKER_REGISTRY: ${DOCKER_REGISTRY}${DOCKER_REGISTRY:+/}
+    container_name: ${COMPOSE_PROJECT_NAME}-backend
+    restart: always
+    depends_on:
+      mysql:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    environment:
+      SERVER_PORT: 9037
+      MYSQL_HOST: mysql
+      MYSQL_PORT: 3306
+      MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_USER: ${MYSQL_USER}
+      MYSQL_PASSWORD: ${MYSQL_ROOT_PASSWORD}
+      REDIS_HOST: redis
+      REDIS_PORT: 6379
+    ports:
+      - "127.0.0.1:${BACKEND_PORT}:9037"
+    networks:
+      - journal-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9037/api/works/latest?pageNum=1&pageSize=1"]
+      interval: 15s
+      timeout: 10s
+      retries: 10
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        DOCKER_REGISTRY: ${DOCKER_REGISTRY}${DOCKER_REGISTRY:+/}
+    container_name: ${COMPOSE_PROJECT_NAME}-frontend
+    restart: always
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "127.0.0.1:${FRONTEND_PORT}:80"
+    networks:
+      - journal-network
+
+volumes:
+  journal-mysql-data:
+    name: ${COMPOSE_PROJECT_NAME}-mysql-data
+  journal-redis-data:
+    name: ${COMPOSE_PROJECT_NAME}-redis-data
+
+networks:
+  journal-network:
+    name: ${COMPOSE_PROJECT_NAME}-network
+    driver: bridge
