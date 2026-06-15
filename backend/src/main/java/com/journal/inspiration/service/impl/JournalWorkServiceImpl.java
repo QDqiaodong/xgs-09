@@ -137,7 +137,17 @@ public class JournalWorkServiceImpl extends ServiceImpl<JournalWorkMapper, Journ
 
     @Override
     @CacheEvict(value = {"latestWorks", "hotWorks"}, allEntries = true)
-    public boolean updateWorkStatus(Long id, Integer status) {
+    public boolean updateWorkStatus(Long id, Integer status, Long operatorId) {
+        if (WorkStatusEnum.getByCode(status) == null) {
+            throw new IllegalArgumentException("非法的状态值: " + status);
+        }
+        JournalWork existWork = getById(id);
+        if (existWork == null) {
+            throw new IllegalArgumentException("作品不存在");
+        }
+        if (operatorId == null || !existWork.getUserId().equals(operatorId)) {
+            throw new SecurityException("无权限修改该作品状态");
+        }
         JournalWork work = new JournalWork();
         work.setId(id);
         work.setStatus(status);

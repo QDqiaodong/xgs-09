@@ -180,7 +180,7 @@
 </template>
 
 <script setup>
-import { ref, onMounted, computed } from 'vue'
+import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
 import { ArrowDown } from '@element-plus/icons-vue'
@@ -200,6 +200,23 @@ const favLoading = ref(false)
 const statsLoading = ref(false)
 const workStats = ref({})
 const userId = computed(() => route.params.id || 1)
+
+const resetData = () => {
+  works.value = []
+  favorites.value = []
+  workStats.value = {}
+}
+
+const loadAllData = () => {
+  resetData()
+  loadWorks()
+  loadWorkStats()
+  loadFavorites()
+}
+
+watch(userId, () => {
+  loadAllData()
+}, { immediate: false })
 
 const favoriteCount = computed(() => favorites.value.length)
 
@@ -258,7 +275,7 @@ const changeWorkStatus = async (work, status) => {
       type: 'warning'
     })
     
-    await updateWorkStatus(work.id, status)
+    await updateWorkStatus(work.id, status, userId.value)
     work.status = status
     ElMessage.success(`状态已改为「${statusDesc}」`)
     loadWorkStats()
@@ -274,9 +291,7 @@ const editWork = (work) => {
 }
 
 onMounted(() => {
-  loadWorks()
-  loadWorkStats()
-  loadFavorites()
+  loadAllData()
 })
 </script>
 

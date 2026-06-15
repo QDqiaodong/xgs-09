@@ -22,7 +22,7 @@ public interface JournalWorkService extends IService<JournalWork> {
 
     Page<WorkVO> getUserWorks(Long userId, Integer pageNum, Integer pageSize);
 
-    boolean updateWorkStatus(Long id, Integer status);
+    boolean updateWorkStatus(Long id, Integer status, Long operatorId);
 
     boolean incrementViewCount(Long id);
 

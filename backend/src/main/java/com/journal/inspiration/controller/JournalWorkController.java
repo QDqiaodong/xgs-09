@@ -58,8 +58,16 @@ public class JournalWorkController {
     }
 
     @PutMapping("/{id}/status")
-    public Result<Boolean> updateStatus(@PathVariable Long id, @RequestParam Integer status) {
-        return Result.success(workService.updateWorkStatus(id, status));
+    public Result<Boolean> updateStatus(@PathVariable Long id,
+                                        @RequestParam Integer status,
+                                        @RequestParam Long operatorId) {
+        try {
+            return Result.success(workService.updateWorkStatus(id, status, operatorId));
+        } catch (IllegalArgumentException e) {
+            return Result.error(400, e.getMessage());
+        } catch (SecurityException e) {
+            return Result.error(403, e.getMessage());
+        }
     }
 
     @GetMapping("/user/{userId}/stats")
