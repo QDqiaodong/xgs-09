@@ -62,6 +62,11 @@
           <div class="content-text">{{ work.content }}</div>
         </div>
 
+        <div class="layout-preview-section" v-if="work">
+          <h3 class="section-title">版式网格预览</h3>
+          <LayoutGridPreviewer :layout-config="workLayoutConfig" />
+        </div>
+
         <div class="inspiration-section" v-if="work.layoutIdea || work.colorScheme || work.inspiration">
           <h3 class="section-title">创作思路</h3>
           
@@ -86,19 +91,35 @@
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import { useRoute } from 'vue-router'
 import { View, Star, Share } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import Header from '@/components/Header.vue'
+import LayoutGridPreviewer from '@/components/LayoutGridPreviewer.vue'
 import { getWorkDetail } from '@/api/work'
 import { toggleFavorite } from '@/api/favorite'
+import { getDefaultLayout } from '@/constants/layoutTemplates'
 
 const route = useRoute()
 const work = ref(null)
 const loading = ref(false)
 const isFavorite = ref(false)
 const defaultImage = 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&h=500&fit=crop'
+
+const workLayoutConfig = computed(() => {
+  if (!work.value) return getDefaultLayout()
+  if (work.value.layoutConfig) {
+    try {
+      return typeof work.value.layoutConfig === 'string'
+        ? JSON.parse(work.value.layoutConfig)
+        : work.value.layoutConfig
+    } catch (e) {
+      console.error('解析 layoutConfig 失败', e)
+    }
+  }
+  return getDefaultLayout(work.value.categories)
+})
 
 const loadDetail = async () => {
   loading.value = true
