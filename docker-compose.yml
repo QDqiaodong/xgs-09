@@ -7,6 +7,7 @@ services:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_ROOT_HOST: "%"
       MYSQL_DATABASE: ${MYSQL_DATABASE}
+      MYSQL_INITDB_SKIP_TZINFO: 1
       TZ: Asia/Shanghai
     ports:
       - "127.0.0.1:${MYSQL_PORT}:3306"
@@ -17,6 +18,9 @@ services:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
       - --skip-log-bin
+      - --performance-schema=OFF
+      - --innodb-buffer-pool-size=64M
+      - --max-connections=30
     networks:
       - journal-network
     healthcheck:
