@@ -1,11 +1,17 @@
 <template>
   <div class="work-card card" @click="goDetail">
-    <div class="card-image">
+    <div class="card-image-wrapper">
+      <div class="card-image-skeleton" v-if="imageLoading">
+        <div class="skeleton-shimmer"></div>
+      </div>
       <img 
+        class="card-image-img"
+        :class="{ 'image-loaded': !imageLoading }"
         :src="work.coverImage || defaultImage" 
         :alt="work.title"
         loading="lazy"
         @error="handleImageError"
+        @load="handleImageLoad"
       />
       <div class="card-stats">
         <span class="stat">
@@ -19,21 +25,27 @@
       </div>
     </div>
     <div class="card-content">
-      <h3 class="card-title">{{ work.title }}</h3>
+      <h3 class="card-title" :title="work.title">{{ work.title }}</h3>
       <div class="card-tags">
         <span 
-          v-for="cat in work.categories || []" 
+          v-for="cat in (work.categories || []).slice(0, 3)" 
           :key="cat.id"
           class="tag"
           :class="cat.type === 'style' ? 'tag-style' : 'tag-scene'"
         >
           {{ cat.name }}
         </span>
+        <span 
+          v-if="(work.categories || []).length > 3" 
+          class="tag tag-more"
+        >
+          +{{ (work.categories || []).length - 3 }}
+        </span>
       </div>
       <div class="card-footer">
         <div class="author">
           <img :src="work.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=default'" alt="" />
-          <span>{{ work.nickname || '手账达人' }}</span>
+          <span class="author-name" :title="work.nickname || '手账达人'">{{ work.nickname || '手账达人' }}</span>
         </div>
         <span class="date">{{ formatDate(work.createTime) }}</span>
       </div>
@@ -42,6 +54,7 @@
 </template>
 
 <script setup>
+import { ref } from 'vue'
 import { View, Star } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
 
@@ -54,6 +67,7 @@ const props = defineProps({
 
 const router = useRouter()
 const defaultImage = 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=300&fit=crop'
+const imageLoading = ref(true)
 
 const goDetail = () => {
   router.push(`/work/${props.work.id}`)
@@ -61,6 +75,11 @@ const goDetail = () => {
 
 const handleImageError = (e) => {
   e.target.src = defaultImage
+  imageLoading.value = false
+}
+
+const handleImageLoad = () => {
+  imageLoading.value = false
 }
 
 const formatDate = (date) => {
@@ -82,24 +101,65 @@ const formatDate = (date) => {
 <style scoped>
 .work-card {
   cursor: pointer;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
 }
 
-.card-image {
+.card-image-wrapper {
   position: relative;
   width: 100%;
-  height: 200px;
+  aspect-ratio: 4 / 3;
   overflow: hidden;
   background: #f5f5f5;
+  flex-shrink: 0;
 }
 
-.card-image img {
+.card-image-skeleton {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  z-index: 1;
+  overflow: hidden;
+}
+
+.skeleton-shimmer {
+  width: 100%;
+  height: 100%;
+  animation: shimmer 1.5s infinite linear;
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: 200% 0;
+  }
+  100% {
+    background-position: -200% 0;
+  }
+}
+
+.card-image-img {
+  position: absolute;
+  top: 0;
+  left: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.5s;
+  object-position: center;
+  opacity: 0;
+  transition: opacity 0.3s ease, transform 0.5s ease;
+  z-index: 2;
 }
 
-.work-card:hover .card-image img {
+.card-image-img.image-loaded {
+  opacity: 1;
+}
+
+.work-card:hover .card-image-img {
   transform: scale(1.05);
 }
 
@@ -109,6 +169,7 @@ const formatDate = (date) => {
   right: 10px;
   display: flex;
   gap: 10px;
+  z-index: 3;
 }
 
 .stat {
@@ -124,6 +185,10 @@ const formatDate = (date) => {
 
 .card-content {
   padding: 16px;
+  display: flex;
+  flex-direction: column;
+  flex: 1;
+  min-height: 0;
 }
 
 .card-title {
@@ -134,10 +199,29 @@ const formatDate = (date) => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+  line-height: 1.4;
+  flex-shrink: 0;
 }
 
 .card-tags {
   margin-bottom: 12px;
+  min-height: 24px;
+  flex-shrink: 0;
+  overflow: hidden;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.card-tags .tag {
+  margin-right: 0;
+  margin-bottom: 0;
+  line-height: 1.4;
+}
+
+.tag-more {
+  background: #f5f5f5;
+  color: #999;
 }
 
 .card-footer {
@@ -146,27 +230,38 @@ const formatDate = (date) => {
   justify-content: space-between;
   padding-top: 12px;
   border-top: 1px solid #f0f0f0;
+  margin-top: auto;
+  flex-shrink: 0;
 }
 
 .author {
   display: flex;
   align-items: center;
   gap: 8px;
+  min-width: 0;
+  flex: 1;
 }
 
 .author img {
   width: 28px;
   height: 28px;
   border-radius: 50%;
+  flex-shrink: 0;
 }
 
-.author span {
+.author-name {
   font-size: 13px;
   color: #666;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 120px;
 }
 
 .date {
   font-size: 12px;
   color: #999;
+  flex-shrink: 0;
+  margin-left: 8px;
 }
 </style>
