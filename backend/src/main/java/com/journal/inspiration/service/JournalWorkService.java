@@ -24,4 +24,6 @@ public interface JournalWorkService extends IService<JournalWork> {
     boolean updateWorkStatus(Long id, Integer status);
 
     boolean incrementViewCount(Long id);
+
+    WorkStatsVO getUserWorkStats(Long userId);
 }

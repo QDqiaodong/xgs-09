@@ -7,10 +7,14 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.journal.inspiration.dto.WorkPublishDTO;
 import com.journal.inspiration.dto.WorkQueryDTO;
+import com.journal.inspiration.common.WorkStatusEnum;
 import com.journal.inspiration.entity.*;
 import com.journal.inspiration.mapper.*;
 import com.journal.inspiration.service.*;
+import com.journal.inspiration.vo.CategoryStatsVO;
 import com.journal.inspiration.vo.CategoryVO;
+import com.journal.inspiration.vo.StatusStatsVO;
+import com.journal.inspiration.vo.WorkStatsVO;
 import com.journal.inspiration.vo.WorkVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.cache.annotation.CacheEvict;
@@ -39,7 +43,7 @@ public class JournalWorkServiceImpl extends ServiceImpl<JournalWorkMapper, Journ
         work.setViewCount(0);
         work.setLikeCount(0);
         work.setFavoriteCount(0);
-        work.setStatus(1);
+        work.setStatus(WorkStatusEnum.PUBLIC.getCode());
         save(work);
 
         if (dto.getCategoryIds() != null && !dto.getCategoryIds().isEmpty()) {
@@ -73,7 +77,12 @@ public class JournalWorkServiceImpl extends ServiceImpl<JournalWorkMapper, Journ
     @Override
     public Page<WorkVO> getWorkList(WorkQueryDTO dto) {
         LambdaQueryWrapper<JournalWork> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(JournalWork::getStatus, 1);
+
+        if (dto.getStatus() != null) {
+            wrapper.eq(JournalWork::getStatus, dto.getStatus());
+        } else if (dto.getUserId() == null) {
+            wrapper.eq(JournalWork::getStatus, WorkStatusEnum.PUBLIC.getCode());
+        }
 
         if (StrUtil.isNotBlank(dto.getKeyword())) {
             wrapper.like(JournalWork::getTitle, dto.getKeyword())
@@ -82,10 +91,6 @@ public class JournalWorkServiceImpl extends ServiceImpl<JournalWorkMapper, Journ
 
         if (dto.getUserId() != null) {
             wrapper.eq(JournalWork::getUserId, dto.getUserId());
-        }
-
-        if (dto.getStatus() != null) {
-            wrapper.eq(JournalWork::getStatus, dto.getStatus());
         }
 
         wrapper.orderByDesc(JournalWork::getCreateTime);
@@ -103,7 +108,7 @@ public class JournalWorkServiceImpl extends ServiceImpl<JournalWorkMapper, Journ
         WorkQueryDTO dto = new WorkQueryDTO();
         dto.setPageNum(pageNum);
         dto.setPageSize(pageSize);
-        dto.setStatus(1);
+        dto.setStatus(WorkStatusEnum.PUBLIC.getCode());
         return getWorkList(dto);
     }
 
@@ -111,7 +116,7 @@ public class JournalWorkServiceImpl extends ServiceImpl<JournalWorkMapper, Journ
     @Cacheable(value = "hotWorks", key = "#pageNum + '_' + #pageSize")
     public Page<WorkVO> getHotWorks(Integer pageNum, Integer pageSize) {
         LambdaQueryWrapper<JournalWork> wrapper = new LambdaQueryWrapper<>();
-        wrapper.eq(JournalWork::getStatus, 1);
+        wrapper.eq(JournalWork::getStatus, WorkStatusEnum.PUBLIC.getCode());
         wrapper.orderByDesc(JournalWork::getViewCount, JournalWork::getFavoriteCount);
 
         Page<JournalWork> page = page(new Page<>(pageNum, pageSize), wrapper);
@@ -147,6 +152,107 @@ public class JournalWorkServiceImpl extends ServiceImpl<JournalWorkMapper, Journ
             return updateById(work);
         }
         return false;
+    }
+
+    @Override
+    public WorkStatsVO getUserWorkStats(Long userId) {
+        WorkStatsVO stats = new WorkStatsVO();
+
+        LambdaQueryWrapper<JournalWork> workWrapper = new LambdaQueryWrapper<>();
+        workWrapper.eq(JournalWork::getUserId, userId);
+        List<JournalWork> allWorks = list(workWrapper);
+
+        int total = allWorks.size();
+        int publicCount = 0;
+        int privateCount = 0;
+        int archivedCount = 0;
+
+        for (JournalWork work : allWorks) {
+            if (WorkStatusEnum.isPublic(work.getStatus())) {
+                publicCount++;
+            } else if (WorkStatusEnum.isPrivate(work.getStatus())) {
+                privateCount++;
+            } else if (WorkStatusEnum.isArchived(work.getStatus())) {
+                archivedCount++;
+            }
+        }
+
+        stats.setTotalWorks(total);
+        stats.setPublicWorks(publicCount);
+        stats.setPrivateWorks(privateCount);
+        stats.setArchivedWorks(archivedCount);
+
+        List<StatusStatsVO> statusStatsList = new java.util.ArrayList<>();
+        for (WorkStatusEnum statusEnum : WorkStatusEnum.values()) {
+            StatusStatsVO statusStats = new StatusStatsVO();
+            statusStats.setStatus(statusEnum.getCode());
+            statusStats.setStatusDesc(statusEnum.getDesc());
+            int count = 0;
+            if (WorkStatusEnum.PUBLIC.equals(statusEnum)) {
+                count = publicCount;
+            } else if (WorkStatusEnum.PRIVATE.equals(statusEnum)) {
+                count = privateCount;
+            } else if (WorkStatusEnum.ARCHIVED.equals(statusEnum)) {
+                count = archivedCount;
+            }
+            statusStats.setCount(count);
+            statusStatsList.add(statusStats);
+        }
+        stats.setStatusStats(statusStatsList);
+
+        if (!allWorks.isEmpty()) {
+            List<Long> workIds = allWorks.stream()
+                    .map(JournalWork::getId)
+                    .collect(Collectors.toList());
+
+            List<WorkCategory> workCategories = workCategoryMapper.selectList(
+                    new LambdaQueryWrapper<WorkCategory>().in(WorkCategory::getWorkId, workIds)
+            );
+
+            if (!workCategories.isEmpty()) {
+                List<Long> categoryIds = workCategories.stream()
+                        .map(WorkCategory::getCategoryId)
+                        .distinct()
+                        .collect(Collectors.toList());
+
+                List<Category> categories = categoryMapper.selectBatchIds(categoryIds);
+
+                java.util.Map<Long, Long> categoryCountMap = workCategories.stream()
+                        .collect(Collectors.groupingBy(WorkCategory::getCategoryId, Collectors.counting()));
+
+                List<CategoryStatsVO> styleStats = new java.util.ArrayList<>();
+                List<CategoryStatsVO> sceneStats = new java.util.ArrayList<>();
+
+                for (Category category : categories) {
+                    CategoryStatsVO categoryStats = new CategoryStatsVO();
+                    categoryStats.setId(category.getId());
+                    categoryStats.setName(category.getName());
+                    categoryStats.setType(category.getType());
+                    categoryStats.setCount(categoryCountMap.getOrDefault(category.getId(), 0L).intValue());
+
+                    if ("style".equals(category.getType())) {
+                        styleStats.add(categoryStats);
+                    } else if ("scene".equals(category.getType())) {
+                        sceneStats.add(categoryStats);
+                    }
+                }
+
+                styleStats.sort((a, b) -> b.getCount() - a.getCount());
+                sceneStats.sort((a, b) -> b.getCount() - a.getCount());
+
+                stats.setStyleStats(styleStats);
+                stats.setSceneStats(sceneStats);
+            }
+        }
+
+        if (stats.getStyleStats() == null) {
+            stats.setStyleStats(new java.util.ArrayList<>());
+        }
+        if (stats.getSceneStats() == null) {
+            stats.setSceneStats(new java.util.ArrayList<>());
+        }
+
+        return stats;
     }
 
     private WorkVO convertToVO(JournalWork work) {

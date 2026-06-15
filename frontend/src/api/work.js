@@ -55,3 +55,10 @@ export const getUserWorks = (userId, pageNum = 1, pageSize = 10) => {
     params: { pageNum, pageSize }
   })
 }
+
+export const getUserWorkStats = (userId) => {
+  return request({
+    url: `/works/user/${userId}/stats`,
+    method: 'get'
+  })
+}

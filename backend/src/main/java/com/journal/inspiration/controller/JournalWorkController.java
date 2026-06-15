@@ -5,6 +5,7 @@ import com.journal.inspiration.common.Result;
 import com.journal.inspiration.dto.WorkPublishDTO;
 import com.journal.inspiration.dto.WorkQueryDTO;
 import com.journal.inspiration.service.JournalWorkService;
+import com.journal.inspiration.vo.WorkStatsVO;
 import com.journal.inspiration.vo.WorkVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
@@ -58,5 +59,10 @@ public class JournalWorkController {
     @PutMapping("/{id}/status")
     public Result<Boolean> updateStatus(@PathVariable Long id, @RequestParam Integer status) {
         return Result.success(workService.updateWorkStatus(id, status));
+    }
+
+    @GetMapping("/user/{userId}/stats")
+    public Result<WorkStatsVO> userWorkStats(@PathVariable Long userId) {
+        return Result.success(workService.getUserWorkStats(userId));
     }
 }
