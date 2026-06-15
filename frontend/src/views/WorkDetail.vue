@@ -3,96 +3,117 @@
     <Header />
     
     <main class="container detail-content" v-loading="loading">
-      <div class="detail-header" v-if="work">
-        <h1 class="detail-title">{{ work.title }}</h1>
-        <div class="detail-meta">
-          <div class="author-info">
-            <img :src="work.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=default'" alt="" />
-            <div>
-              <span class="author-name">{{ work.nickname || '手账达人' }}</span>
-              <span class="publish-time">{{ formatDate(work.createTime) }}</span>
+      <div v-if="error" class="state-container">
+        <el-result icon="error" :title="errorTitle" :sub-title="errorSubtitle">
+          <template #extra>
+            <el-button type="primary" @click="loadDetail">重新加载</el-button>
+            <el-button @click="goHome">返回首页</el-button>
+          </template>
+        </el-result>
+      </div>
+
+      <template v-else-if="!loading && !work">
+        <div class="state-container">
+          <el-result icon="warning" title="作品不存在" sub-title="该作品可能已被删除或链接无效">
+            <template #extra>
+              <el-button type="primary" @click="goHome">返回首页</el-button>
+            </template>
+          </el-result>
+        </div>
+      </template>
+
+      <template v-else-if="work">
+        <div class="detail-header">
+          <h1 class="detail-title">{{ work.title }}</h1>
+          <div class="detail-meta">
+            <div class="author-info">
+              <img :src="work.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=default'" alt="" />
+              <div>
+                <span class="author-name">{{ work.nickname || '手账达人' }}</span>
+                <span class="publish-time">{{ formatDate(work.createTime) }}</span>
+              </div>
+            </div>
+            <div class="action-btns">
+              <button 
+                class="action-btn favorite" 
+                :class="{ active: isFavorite }"
+                @click="handleFavorite"
+              >
+                <el-icon><Star :fill="isFavorite ? '#ff6b9d' : 'none'" /></el-icon>
+                {{ isFavorite ? '已收藏' : '收藏' }}
+              </button>
+              <button class="action-btn">
+                <el-icon><Share /></el-icon>
+                分享
+              </button>
             </div>
           </div>
-          <div class="action-btns">
-            <button 
-              class="action-btn favorite" 
-              :class="{ active: isFavorite }"
-              @click="handleFavorite"
+        </div>
+
+        <div class="detail-body">
+          <div class="tags">
+            <span 
+              v-for="cat in work.categories" 
+              :key="cat.id"
+              class="tag"
+              :class="cat.type === 'style' ? 'tag-style' : 'tag-scene'"
             >
-              <el-icon><Star :fill="isFavorite ? '#ff6b9d' : 'none'" /></el-icon>
-              {{ isFavorite ? '已收藏' : '收藏' }}
-            </button>
-            <button class="action-btn">
-              <el-icon><Share /></el-icon>
-              分享
-            </button>
+              {{ cat.name }}
+            </span>
+          </div>
+
+          <div class="cover-section">
+            <img :src="work.coverImage || defaultImage" alt="" @error="handleImageError" />
+          </div>
+
+          <div class="stats-row">
+            <div class="stat-item">
+              <el-icon><View /></el-icon>
+              <span>{{ work.viewCount || 0 }} 浏览</span>
+            </div>
+            <div class="stat-item">
+              <el-icon><Star /></el-icon>
+              <span>{{ work.favoriteCount || 0 }} 收藏</span>
+            </div>
+          </div>
+
+          <div class="content-section" v-if="work.content">
+            <h3 class="section-title">作品内容</h3>
+            <div class="content-text">{{ work.content }}</div>
+          </div>
+
+          <div class="layout-preview-section">
+            <h3 class="section-title">版式网格预览</h3>
+            <LayoutGridPreviewer :layout-config="workLayoutConfig" />
+          </div>
+
+          <div class="inspiration-section" v-if="work.layoutIdea || work.colorScheme || work.inspiration">
+            <h3 class="section-title">创作思路</h3>
+            
+            <div class="idea-item" v-if="work.layoutIdea">
+              <div class="idea-label">排版思路</div>
+              <div class="idea-content">{{ work.layoutIdea }}</div>
+            </div>
+            
+            <div class="idea-item" v-if="work.colorScheme">
+              <div class="idea-label">配色方案</div>
+              <div class="idea-content">{{ work.colorScheme }}</div>
+            </div>
+            
+            <div class="idea-item" v-if="work.inspiration">
+              <div class="idea-label">创作灵感</div>
+              <div class="idea-content">{{ work.inspiration }}</div>
+            </div>
           </div>
         </div>
-      </div>
-
-      <div class="detail-body" v-if="work">
-        <div class="tags">
-          <span 
-            v-for="cat in work.categories" 
-            :key="cat.id"
-            class="tag"
-            :class="cat.type === 'style' ? 'tag-style' : 'tag-scene'"
-          >
-            {{ cat.name }}
-          </span>
-        </div>
-
-        <div class="cover-section">
-          <img :src="work.coverImage || defaultImage" alt="" @error="handleImageError" />
-        </div>
-
-        <div class="stats-row">
-          <div class="stat-item">
-            <el-icon><View /></el-icon>
-            <span>{{ work.viewCount || 0 }} 浏览</span>
-          </div>
-          <div class="stat-item">
-            <el-icon><Star /></el-icon>
-            <span>{{ work.favoriteCount || 0 }} 收藏</span>
-          </div>
-        </div>
-
-        <div class="content-section" v-if="work.content">
-          <h3 class="section-title">作品内容</h3>
-          <div class="content-text">{{ work.content }}</div>
-        </div>
-
-        <div class="layout-preview-section" v-if="work">
-          <h3 class="section-title">版式网格预览</h3>
-          <LayoutGridPreviewer :layout-config="workLayoutConfig" />
-        </div>
-
-        <div class="inspiration-section" v-if="work.layoutIdea || work.colorScheme || work.inspiration">
-          <h3 class="section-title">创作思路</h3>
-          
-          <div class="idea-item" v-if="work.layoutIdea">
-            <div class="idea-label">排版思路</div>
-            <div class="idea-content">{{ work.layoutIdea }}</div>
-          </div>
-          
-          <div class="idea-item" v-if="work.colorScheme">
-            <div class="idea-label">配色方案</div>
-            <div class="idea-content">{{ work.colorScheme }}</div>
-          </div>
-          
-          <div class="idea-item" v-if="work.inspiration">
-            <div class="idea-label">创作灵感</div>
-            <div class="idea-content">{{ work.inspiration }}</div>
-          </div>
-        </div>
-      </div>
+      </template>
     </main>
   </div>
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
-import { useRoute } from 'vue-router'
+import { ref, computed, onMounted, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { View, Star, Share } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import Header from '@/components/Header.vue'
@@ -102,9 +123,13 @@ import { toggleFavorite } from '@/api/favorite'
 import { getDefaultLayout } from '@/constants/layoutTemplates'
 
 const route = useRoute()
+const router = useRouter()
 const work = ref(null)
 const loading = ref(false)
 const isFavorite = ref(false)
+const error = ref(null)
+const errorTitle = ref('')
+const errorSubtitle = ref('')
 const defaultImage = 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&h=500&fit=crop'
 
 const workLayoutConfig = computed(() => {
@@ -123,13 +148,36 @@ const workLayoutConfig = computed(() => {
 
 const loadDetail = async () => {
   loading.value = true
+  work.value = null
+  error.value = null
   try {
     const res = await getWorkDetail(route.params.id, 1)
     work.value = res.data
     isFavorite.value = res.data?.isFavorite || false
+  } catch (e) {
+    if (e.code === 404 || (e.message && e.message === '作品不存在')) {
+      error.value = null
+      work.value = null
+    } else {
+      error.value = e
+      if (e.message && e.message.includes('Network')) {
+        errorTitle.value = '网络异常'
+        errorSubtitle.value = '请检查您的网络连接后重试'
+      } else if (e.message && e.message.includes('timeout')) {
+        errorTitle.value = '请求超时'
+        errorSubtitle.value = '服务器响应超时，请稍后再试'
+      } else {
+        errorTitle.value = '加载失败'
+        errorSubtitle.value = e.message || '数据加载异常，请稍后再试'
+      }
+    }
   } finally {
     loading.value = false
   }
+}
+
+const goHome = () => {
+  router.push('/')
 }
 
 const handleFavorite = async () => {
@@ -156,12 +204,28 @@ const formatDate = (date) => {
 onMounted(() => {
   loadDetail()
 })
+
+watch(
+  () => route.params.id,
+  (newId, oldId) => {
+    if (newId && newId !== oldId) {
+      loadDetail()
+    }
+  }
+)
 </script>
 
 <style scoped>
 .detail-content {
   padding: 30px 20px 60px;
   max-width: 800px;
+}
+
+.state-container {
+  min-height: 400px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .detail-header {

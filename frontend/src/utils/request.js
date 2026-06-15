@@ -19,13 +19,19 @@ service.interceptors.response.use(
   response => {
     const res = response.data
     if (res.code !== 200) {
-      ElMessage.error(res.message || '请求失败')
-      return Promise.reject(new Error(res.message || '请求失败'))
+      if (res.code !== 404) {
+        ElMessage.error(res.message || '请求失败')
+      }
+      const err = new Error(res.message || '请求失败')
+      err.code = res.code
+      return Promise.reject(err)
     }
     return res
   },
   error => {
-    ElMessage.error(error.message || '网络错误')
+    if (!error.__silent) {
+      ElMessage.error(error.message || '网络错误')
+    }
     return Promise.reject(error)
   }
 )
