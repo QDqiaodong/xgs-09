@@ -77,23 +77,28 @@
             <LayoutGridPreviewer :layout-config="workLayoutConfig" />
           </div>
 
-          <div class="inspiration-section" v-if="work.layoutIdea || work.colorScheme || work.inspiration">
-            <h3 class="section-title">创作思路</h3>
-            
-            <div class="idea-item" v-if="work.layoutIdea">
-              <div class="idea-label">排版思路</div>
-              <div class="idea-content">{{ work.layoutIdea }}</div>
+          <div class="inspiration-section" v-if="work.inspiration">
+            <div class="section-header">
+              <el-icon class="section-icon"><MagicStick /></el-icon>
+              <h3 class="section-title">灵感来源</h3>
             </div>
-            
-            <div class="idea-item" v-if="work.colorScheme">
-              <div class="idea-label">配色方案</div>
-              <div class="idea-content">{{ work.colorScheme }}</div>
+            <div class="section-content">{{ work.inspiration }}</div>
+          </div>
+
+          <div class="layout-section" v-if="work.layoutIdea">
+            <div class="section-header">
+              <el-icon class="section-icon"><Grid /></el-icon>
+              <h3 class="section-title">排版想法</h3>
             </div>
-            
-            <div class="idea-item" v-if="work.inspiration">
-              <div class="idea-label">创作灵感</div>
-              <div class="idea-content">{{ work.inspiration }}</div>
+            <div class="section-content">{{ work.layoutIdea }}</div>
+          </div>
+
+          <div class="color-section" v-if="work.colorScheme">
+            <div class="section-header">
+              <el-icon class="section-icon"><Brush /></el-icon>
+              <h3 class="section-title">色彩方案</h3>
             </div>
+            <div class="section-content">{{ work.colorScheme }}</div>
           </div>
         </div>
       </template>
@@ -104,7 +109,7 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { View, Star, Share } from '@element-plus/icons-vue'
+import { View, Star, Share, MagicStick, Grid, Brush } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import Header from '@/components/Header.vue'
 import LayoutGridPreviewer from '@/components/LayoutGridPreviewer.vue'
@@ -334,8 +339,28 @@ watch(
 }
 
 .content-section,
-.inspiration-section {
+.inspiration-section,
+.layout-section,
+.color-section {
   margin-bottom: 32px;
+  padding: 24px;
+  border-radius: 12px;
+  transition: all 0.3s;
+}
+
+.inspiration-section {
+  background: linear-gradient(135deg, #fff9e6 0%, #fff5d6 100%);
+  border-left: 4px solid #ffc107;
+}
+
+.layout-section {
+  background: linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%);
+  border-left: 4px solid #4caf50;
+}
+
+.color-section {
+  background: linear-gradient(135deg, #fce4ec 0%, #f8bbd0 100%);
+  border-left: 4px solid #e91e63;
 }
 
 .content-text {
@@ -344,23 +369,53 @@ watch(
   font-size: 15px;
 }
 
-.idea-item {
-  margin-bottom: 20px;
-  padding: 16px;
-  background: #faf8f5;
-  border-radius: 8px;
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
 }
 
-.idea-label {
-  font-size: 14px;
-  font-weight: 600;
-  color: #ff6b9d;
-  margin-bottom: 8px;
+.section-icon {
+  font-size: 24px;
 }
 
-.idea-content {
-  line-height: 1.7;
+.inspiration-section .section-icon {
+  color: #ff9800;
+}
+
+.layout-section .section-icon {
+  color: #4caf50;
+}
+
+.color-section .section-icon {
+  color: #e91e63;
+}
+
+.inspiration-section .section-title,
+.layout-section .section-title,
+.color-section .section-title {
+  margin-bottom: 0;
+  border-left: none;
+  padding-left: 0;
+}
+
+.inspiration-section .section-title {
+  color: #e65100;
+}
+
+.layout-section .section-title {
+  color: #2e7d32;
+}
+
+.color-section .section-title {
+  color: #ad1457;
+}
+
+.section-content {
+  line-height: 1.8;
   color: #555;
-  font-size: 14px;
+  font-size: 15px;
+  white-space: pre-wrap;
 }
 </style>
