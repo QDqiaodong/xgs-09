@@ -19,6 +19,16 @@ public class WorkVO {
 
     private String coverImage;
 
+    private Integer coverType;
+
+    private String coverTypeDesc;
+
+    private Integer coverWidthRatio;
+
+    private Integer coverHeightRatio;
+
+    private Double coverAspectRatio;
+
     private String content;
 
     private String layoutIdea;

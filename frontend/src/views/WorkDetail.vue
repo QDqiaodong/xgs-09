@@ -50,10 +50,22 @@
             >
               {{ cat.name }}
             </span>
+            <span class="tag tag-cover-type" v-if="coverTypeInfo">
+              {{ coverTypeInfo.name }} · {{ coverTypeInfo.widthRatio }}:{{ coverTypeInfo.heightRatio }}
+            </span>
           </div>
 
-          <div class="cover-section">
-            <img :src="work.coverImage || defaultImage" alt="" @error="handleImageError" />
+          <div 
+            class="cover-section" 
+            :class="['cover-' + coverTypeClass]"
+          >
+            <div class="cover-image-wrapper" :style="{ aspectRatio: coverAspectRatio }">
+              <img :src="work.coverImage || defaultImage" alt="" @error="handleImageError" />
+            </div>
+            <div class="cover-type-desc" v-if="coverTypeInfo">
+              <el-icon><Picture /></el-icon>
+              <span>{{ coverTypeInfo.tip }}</span>
+            </div>
           </div>
 
           <div class="stats-row">
@@ -109,13 +121,14 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { View, Star, Share, MagicStick, Grid, Brush } from '@element-plus/icons-vue'
+import { View, Star, Share, MagicStick, Grid, Brush, Picture } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import Header from '@/components/Header.vue'
 import LayoutGridPreviewer from '@/components/LayoutGridPreviewer.vue'
 import { getWorkDetail } from '@/api/work'
 import { toggleFavorite } from '@/api/favorite'
 import { getDefaultLayout } from '@/constants/layoutTemplates'
+import { getCoverTypeByCode } from '@/constants/coverTypes'
 
 const route = useRoute()
 const router = useRouter()
@@ -127,6 +140,21 @@ const errorTitle = ref('')
 const errorSubtitle = ref('')
 const isNotFoundError = ref(false)
 const defaultImage = 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&h=500&fit=crop'
+
+const coverTypeInfo = computed(() => {
+  if (!work.value) return null
+  return getCoverTypeByCode(work.value.coverType)
+})
+
+const coverTypeClass = computed(() => {
+  if (!coverTypeInfo.value) return 'horizontal-collage'
+  return coverTypeInfo.value.key.toLowerCase().replace(/_/g, '-')
+})
+
+const coverAspectRatio = computed(() => {
+  if (!coverTypeInfo.value) return '3 / 2'
+  return `${coverTypeInfo.value.widthRatio} / ${coverTypeInfo.value.heightRatio}`
+})
 
 const workLayoutConfig = computed(() => {
   if (!work.value) return getDefaultLayout()
@@ -299,18 +327,62 @@ watch(
 
 .tags {
   margin-bottom: 24px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.tag-cover-type {
+  background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
+  color: #fff;
+  border: none;
 }
 
 .cover-section {
   margin-bottom: 24px;
   border-radius: 12px;
   overflow: hidden;
+  background: #fafafa;
 }
 
-.cover-section img {
+.cover-image-wrapper {
   width: 100%;
-  max-height: 500px;
+  position: relative;
+  overflow: hidden;
+}
+
+.cover-image-wrapper img {
+  width: 100%;
+  height: 100%;
   object-fit: cover;
+  display: block;
+}
+
+.cover-vertical-full .cover-image-wrapper {
+  max-width: 500px;
+  margin: 0 auto;
+}
+
+.cover-closeup .cover-image-wrapper {
+  max-width: 500px;
+  margin: 0 auto;
+  border-radius: 12px;
+}
+
+.cover-type-desc {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px 16px;
+  background: #fff5f8;
+  color: #ff6b9d;
+  font-size: 13px;
+  border-top: 1px solid #ffe0e9;
+}
+
+.cover-type-desc .el-icon {
+  font-size: 16px;
 }
 
 .stats-row {

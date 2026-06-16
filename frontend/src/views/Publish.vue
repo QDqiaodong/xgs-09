@@ -11,16 +11,46 @@
         </el-form-item>
         
         <el-form-item label="封面图片" prop="coverImage">
-          <div class="image-upload">
-            <div v-if="form.coverImage" class="image-preview">
-              <img :src="form.coverImage" alt="" />
-              <button class="remove-btn" @click="form.coverImage = ''">
-                <el-icon><Close /></el-icon>
-              </button>
+          <div class="cover-upload-section">
+            <div 
+              class="image-upload"
+              :style="{ aspectRatio: selectedCoverAspectRatio }"
+            >
+              <div v-if="form.coverImage" class="image-preview">
+                <img :src="form.coverImage" alt="" />
+                <button class="remove-btn" @click="form.coverImage = ''">
+                  <el-icon><Close /></el-icon>
+                </button>
+              </div>
+              <div v-else class="upload-placeholder" @click="uploadImage">
+                <el-icon><Plus /></el-icon>
+                <span>上传封面图片</span>
+              </div>
             </div>
-            <div v-else class="upload-placeholder" @click="uploadImage">
-              <el-icon><Plus /></el-icon>
-              <span>上传封面图片</span>
+          </div>
+        </el-form-item>
+
+        <el-form-item label="封面比例">
+          <div class="cover-type-selector">
+            <div 
+              v-for="type in coverTypeList" 
+              :key="type.code"
+              class="cover-type-option"
+              :class="{ active: form.coverType === type.code }"
+              @click="selectCoverType(type.code)"
+            >
+              <div class="cover-type-preview" :style="{ aspectRatio: `${type.widthRatio} / ${type.heightRatio}` }">
+                <div class="preview-inner">
+                  <span class="ratio-text">{{ type.widthRatio }}:{{ type.heightRatio }}</span>
+                </div>
+              </div>
+              <div class="cover-type-info">
+                <span class="cover-type-name">{{ type.name }}</span>
+                <span class="cover-type-tip">{{ type.tip }}</span>
+              </div>
+              <div class="check-icon" v-if="form.coverType === type.code">
+                <el-icon><Check /></el-icon>
+              </div>
             </div>
           </div>
         </el-form-item>
@@ -106,30 +136,42 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted } from 'vue'
+import { ref, reactive, onMounted, computed } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Plus, Close } from '@element-plus/icons-vue'
+import { Plus, Close, Check } from '@element-plus/icons-vue'
 import Header from '@/components/Header.vue'
 import { publishWork } from '@/api/work'
 import { getCategoryList } from '@/api/category'
+import { COVER_TYPE_LIST, DEFAULT_COVER_TYPE, getCoverTypeByCode } from '@/constants/coverTypes'
 
 const router = useRouter()
 const formRef = ref(null)
 const submitting = ref(false)
 const styleCategories = ref([])
 const sceneCategories = ref([])
+const coverTypeList = COVER_TYPE_LIST
 
 const form = reactive({
   userId: 1,
   title: '',
   coverImage: '',
+  coverType: DEFAULT_COVER_TYPE.code,
   content: '',
   layoutIdea: '',
   colorScheme: '',
   inspiration: '',
   categoryIds: []
 })
+
+const selectedCoverAspectRatio = computed(() => {
+  const type = getCoverTypeByCode(form.coverType)
+  return `${type.widthRatio} / ${type.heightRatio}`
+})
+
+const selectCoverType = (code) => {
+  form.coverType = code
+}
 
 const loadCategories = async () => {
   const [styleRes, sceneRes] = await Promise.all([
@@ -210,9 +252,15 @@ onMounted(() => {
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
 }
 
+.cover-upload-section {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
 .image-upload {
-  width: 300px;
-  height: 200px;
+  width: 320px;
+  max-width: 100%;
 }
 
 .upload-placeholder {
@@ -266,6 +314,96 @@ onMounted(() => {
   display: flex;
   align-items: center;
   justify-content: center;
+}
+
+.cover-type-selector {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.cover-type-option {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 2px solid #e8e8e8;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s;
+  background: #fafafa;
+  flex: 1;
+  min-width: 180px;
+  max-width: 220px;
+}
+
+.cover-type-option:hover {
+  border-color: #ff9a9e;
+  background: #fff5f8;
+}
+
+.cover-type-option.active {
+  border-color: #ff6b9d;
+  background: linear-gradient(135deg, #fff5f8 0%, #ffe8f0 100%);
+  box-shadow: 0 2px 8px rgba(255, 107, 157, 0.15);
+}
+
+.cover-type-preview {
+  width: 100%;
+  background: #fff;
+  border-radius: 8px;
+  overflow: hidden;
+  border: 1px solid #eee;
+}
+
+.preview-inner {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #ffecd2 0%, #fcb69f 100%);
+}
+
+.ratio-text {
+  font-size: 16px;
+  font-weight: 600;
+  color: #fff;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
+}
+
+.cover-type-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cover-type-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+}
+
+.cover-type-tip {
+  font-size: 12px;
+  color: #999;
+  line-height: 1.4;
+}
+
+.check-icon {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: #ff6b9d;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
 }
 
 .category-section {

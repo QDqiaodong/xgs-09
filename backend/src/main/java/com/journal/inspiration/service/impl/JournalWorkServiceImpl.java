@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.journal.inspiration.dto.WorkPublishDTO;
 import com.journal.inspiration.dto.WorkQueryDTO;
+import com.journal.inspiration.common.CoverTypeEnum;
 import com.journal.inspiration.common.WorkStatusEnum;
 import com.journal.inspiration.entity.*;
 import com.journal.inspiration.mapper.*;
@@ -40,6 +41,9 @@ public class JournalWorkServiceImpl extends ServiceImpl<JournalWorkMapper, Journ
     public Long publishWork(WorkPublishDTO dto) {
         JournalWork work = new JournalWork();
         BeanUtil.copyProperties(dto, work);
+        if (work.getCoverType() == null || CoverTypeEnum.getByCode(work.getCoverType()) == null) {
+            work.setCoverType(CoverTypeEnum.getDefault().getCode());
+        }
         work.setViewCount(0);
         work.setLikeCount(0);
         work.setFavoriteCount(0);
@@ -268,6 +272,16 @@ public class JournalWorkServiceImpl extends ServiceImpl<JournalWorkMapper, Journ
     private WorkVO convertToVO(JournalWork work) {
         WorkVO vo = new WorkVO();
         BeanUtil.copyProperties(work, vo);
+
+        CoverTypeEnum coverType = CoverTypeEnum.getByCode(work.getCoverType());
+        if (coverType == null) {
+            coverType = CoverTypeEnum.getDefault();
+        }
+        vo.setCoverType(coverType.getCode());
+        vo.setCoverTypeDesc(coverType.getDesc());
+        vo.setCoverWidthRatio(coverType.getWidthRatio());
+        vo.setCoverHeightRatio(coverType.getHeightRatio());
+        vo.setCoverAspectRatio(coverType.getAspectRatio());
 
         User user = userMapper.selectById(work.getUserId());
         if (user != null) {

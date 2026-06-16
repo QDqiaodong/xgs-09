@@ -1,6 +1,9 @@
 <template>
   <div class="work-card card" @click="goDetail">
-    <div class="card-image-wrapper">
+    <div 
+      class="card-image-wrapper" 
+      :style="{ aspectRatio: coverAspectRatio }"
+    >
       <div class="card-image-skeleton" v-if="imageLoading">
         <div class="skeleton-shimmer"></div>
       </div>
@@ -22,6 +25,9 @@
           <el-icon><Star /></el-icon>
           {{ work.favoriteCount || 0 }}
         </span>
+      </div>
+      <div class="cover-type-badge" v-if="coverTypeInfo">
+        {{ coverTypeInfo.name }}
       </div>
     </div>
     <div class="card-content">
@@ -54,9 +60,10 @@
 </template>
 
 <script setup>
-import { ref } from 'vue'
+import { ref, computed } from 'vue'
 import { View, Star } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
+import { getCoverTypeByCode } from '@/constants/coverTypes'
 
 const props = defineProps({
   work: {
@@ -68,6 +75,15 @@ const props = defineProps({
 const router = useRouter()
 const defaultImage = 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=300&fit=crop'
 const imageLoading = ref(true)
+
+const coverTypeInfo = computed(() => {
+  return getCoverTypeByCode(props.work.coverType)
+})
+
+const coverAspectRatio = computed(() => {
+  const info = coverTypeInfo.value
+  return `${info.widthRatio} / ${info.heightRatio}`
+})
 
 const goDetail = () => {
   router.push(`/work/${props.work.id}`)
@@ -109,7 +125,6 @@ const formatDate = (date) => {
 .card-image-wrapper {
   position: relative;
   width: 100%;
-  aspect-ratio: 4 / 3;
   overflow: hidden;
   background: #f5f5f5;
   flex-shrink: 0;
@@ -181,6 +196,19 @@ const formatDate = (date) => {
   color: #fff;
   border-radius: 12px;
   font-size: 12px;
+}
+
+.cover-type-badge {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+  padding: 4px 12px;
+  background: rgba(255, 107, 157, 0.9);
+  color: #fff;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+  z-index: 3;
 }
 
 .card-content {

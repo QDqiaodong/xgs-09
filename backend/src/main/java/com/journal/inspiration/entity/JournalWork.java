@@ -17,6 +17,8 @@ public class JournalWork {
 
     private String coverImage;
 
+    private Integer coverType;
+
     private String content;
 
     private String layoutIdea;

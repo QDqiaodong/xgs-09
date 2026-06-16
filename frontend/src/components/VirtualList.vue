@@ -6,7 +6,7 @@
           class="virtual-list-row"
           v-for="(row, rowIndex) in visibleRows"
           :key="rowIndex"
-          :style="{ height: rowHeight + 'px' }"
+          :style="{ height: getRowHeight(startRowIndex + rowIndex) + 'px' }"
         >
           <div
             class="virtual-list-col"
@@ -23,6 +23,7 @@
 
 <script setup>
 import { ref, computed, onMounted, nextTick, watch } from 'vue'
+import { getCardHeightByCoverType } from '@/constants/coverTypes'
 
 const props = defineProps({
   items: {
@@ -44,6 +45,14 @@ const props = defineProps({
   buffer: {
     type: Number,
     default: 3
+  },
+  getItemHeight: {
+    type: Function,
+    default: null
+  },
+  columnWidth: {
+    type: Number,
+    default: 280
   }
 })
 
@@ -53,22 +62,76 @@ const containerRef = ref(null)
 const scrollTop = ref(0)
 const containerHeight = ref(0)
 
-const rowHeight = computed(() => props.itemHeight + props.gap)
+const calculateItemHeight = (item, index) => {
+  if (props.getItemHeight) {
+    return props.getItemHeight(item, index)
+  }
+  if (item && item.coverType !== undefined) {
+    return getCardHeightByCoverType(item.coverType, props.columnWidth)
+  }
+  return props.itemHeight
+}
+
+const getRowHeight = (rowIndex) => {
+  let maxHeight = props.itemHeight
+  for (let c = 0; c < props.columns; c++) {
+    const itemIndex = rowIndex * props.columns + c
+    if (itemIndex < props.items.length) {
+      const height = calculateItemHeight(props.items[itemIndex], itemIndex)
+      if (height > maxHeight) {
+        maxHeight = height
+      }
+    }
+  }
+  return maxHeight + props.gap
+}
+
+const rowHeights = computed(() => {
+  const heights = []
+  const totalRows = Math.ceil(props.items.length / props.columns)
+  for (let r = 0; r < totalRows; r++) {
+    heights.push(getRowHeight(r))
+  }
+  return heights
+})
+
+const rowOffsets = computed(() => {
+  const offsets = []
+  let offset = 0
+  for (let h of rowHeights.value) {
+    offsets.push(offset)
+    offset += h
+  }
+  return offsets
+})
+
+const totalHeight = computed(() => {
+  if (rowHeights.value.length === 0) return 0
+  return rowOffsets.value[rowOffsets.value.length - 1] + rowHeights.value[rowHeights.value.length - 1] - props.gap
+})
 
 const totalRows = computed(() => Math.ceil(props.items.length / props.columns))
 
-const totalHeight = computed(() => {
-  if (totalRows.value === 0) return 0
-  return totalRows.value * rowHeight.value - props.gap
-})
+const findStartRow = (scrollPos) => {
+  let low = 0
+  let high = rowOffsets.value.length - 1
+  while (low < high) {
+    const mid = Math.floor((low + high) / 2)
+    if (rowOffsets.value[mid] + rowHeights.value[mid] < scrollPos) {
+      low = mid + 1
+    } else {
+      high = mid
+    }
+  }
+  return Math.max(0, low - props.buffer)
+}
 
 const startRowIndex = computed(() => {
-  const index = Math.floor(scrollTop.value / rowHeight.value)
-  return Math.max(0, index - props.buffer)
+  return findStartRow(scrollTop.value)
 })
 
 const visibleRowCount = computed(() => {
-  return Math.ceil(containerHeight.value / rowHeight.value) + props.buffer * 2
+  return Math.ceil(containerHeight.value / props.itemHeight) + props.buffer * 2
 })
 
 const endRowIndex = computed(() => {
@@ -90,7 +153,7 @@ const visibleRows = computed(() => {
 })
 
 const offsetY = computed(() => {
-  return startRowIndex.value * rowHeight.value
+  return rowOffsets.value[startRowIndex.value] || 0
 })
 
 const getItemKey = (item, index) => {
