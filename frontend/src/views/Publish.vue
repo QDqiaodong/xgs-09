@@ -107,12 +107,42 @@
         </el-form-item>
         
         <el-form-item label="配色方案">
-          <el-input 
-            v-model="form.colorScheme" 
-            type="textarea" 
-            :rows="3"
-            placeholder="描述你的配色方案，比如主色调、辅助色等..."
-          />
+          <div class="color-scheme-editor">
+            <div class="color-swatches">
+              <div 
+                v-for="(swatch, index) in colorSwatches" 
+                :key="index"
+                class="color-swatch-item"
+              >
+                <div class="swatch-color" :style="{ background: swatch.color }">
+                  <el-color-picker 
+                    v-model="swatch.color" 
+                    size="small"
+                    :show-alpha="false"
+                  />
+                </div>
+                <div class="swatch-info">
+                  <el-input 
+                    v-model="swatch.name" 
+                    placeholder="颜色名称" 
+                    size="small"
+                  />
+                  <el-input 
+                    v-model="swatch.purpose" 
+                    placeholder="用途说明" 
+                    size="small"
+                  />
+                </div>
+                <button class="remove-swatch" @click="removeColorSwatch(index)">
+                  <el-icon><Close /></el-icon>
+                </button>
+              </div>
+            </div>
+            <button class="add-swatch-btn" @click="addColorSwatch">
+              <el-icon><Plus /></el-icon>
+              添加颜色
+            </button>
+          </div>
         </el-form-item>
         
         <el-form-item label="创作灵感">
@@ -152,6 +182,12 @@ const styleCategories = ref([])
 const sceneCategories = ref([])
 const coverTypeList = COVER_TYPE_LIST
 
+const colorSwatches = ref([
+  { color: '#FFB6C1', name: '主色调', purpose: '用于标题和重点内容' },
+  { color: '#98D8C8', name: '辅助色', purpose: '用于装饰和点缀' },
+  { color: '#FFF5EE', name: '背景色', purpose: '页面底色' }
+])
+
 const form = reactive({
   userId: 1,
   title: '',
@@ -163,6 +199,25 @@ const form = reactive({
   inspiration: '',
   categoryIds: []
 })
+
+const addColorSwatch = () => {
+  colorSwatches.value.push({
+    color: '#FFFFFF',
+    name: '',
+    purpose: ''
+  })
+}
+
+const removeColorSwatch = (index) => {
+  if (colorSwatches.value.length > 1) {
+    colorSwatches.value.splice(index, 1)
+  }
+}
+
+const getColorSchemeJson = () => {
+  const validSwatches = colorSwatches.value.filter(s => s.name || s.purpose)
+  return JSON.stringify(validSwatches)
+}
 
 const selectedCoverAspectRatio = computed(() => {
   const type = getCoverTypeByCode(form.coverType)
@@ -209,6 +264,8 @@ const handleSubmit = async () => {
     ElMessage.warning('请上传封面图片')
     return
   }
+  
+  form.colorScheme = getColorSchemeJson()
   
   submitting.value = true
   try {
@@ -450,5 +507,96 @@ onMounted(() => {
   background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
   border-color: transparent;
   color: #fff;
+}
+
+.color-scheme-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.color-swatches {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.color-swatch-item {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  background: #fafafa;
+  border-radius: 8px;
+  border: 1px solid #eee;
+}
+
+.swatch-color {
+  width: 48px;
+  height: 48px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  border: 2px solid #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.swatch-info {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.remove-swatch {
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: #ff6b6b;
+  color: #fff;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.3s;
+}
+
+.remove-swatch:hover {
+  background: #ff5252;
+}
+
+.add-swatch-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px;
+  border: 2px dashed #d9d9d9;
+  border-radius: 8px;
+  background: #fafafa;
+  color: #999;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.add-swatch-btn:hover {
+  border-color: #ff9a9e;
+  color: #ff6b9d;
+  background: #fff5f8;
+}
+
+@media (max-width: 600px) {
+  .color-swatch-item {
+    flex-wrap: wrap;
+  }
+  
+  .swatch-info {
+    width: calc(100% - 60px);
+  }
 }
 </style>

@@ -110,7 +110,22 @@
               <el-icon class="section-icon"><Brush /></el-icon>
               <h3 class="section-title">色彩方案</h3>
             </div>
-            <div class="section-content">{{ work.colorScheme }}</div>
+            <template v-if="colorSwatches.length > 0">
+              <div class="color-swatches-horizontal">
+                <div 
+                  v-for="(swatch, index) in colorSwatches" 
+                  :key="index"
+                  class="swatch-card"
+                >
+                  <div class="swatch-preview" :style="{ background: swatch.color }"></div>
+                  <div class="swatch-details">
+                    <span class="swatch-name">{{ swatch.name }}</span>
+                    <span class="swatch-purpose">{{ swatch.purpose }}</span>
+                  </div>
+                </div>
+              </div>
+            </template>
+            <div v-else class="section-content">{{ work.colorScheme }}</div>
           </div>
         </div>
       </template>
@@ -168,6 +183,19 @@ const workLayoutConfig = computed(() => {
     }
   }
   return getDefaultLayout(work.value.categories)
+})
+
+const colorSwatches = computed(() => {
+  if (!work.value || !work.value.colorScheme) return []
+  try {
+    const parsed = JSON.parse(work.value.colorScheme)
+    if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].color) {
+      return parsed
+    }
+    return []
+  } catch (e) {
+    return []
+  }
 })
 
 const loadDetail = async () => {
@@ -489,5 +517,86 @@ watch(
   color: #555;
   font-size: 15px;
   white-space: pre-wrap;
+}
+
+.color-swatches-horizontal {
+  display: flex;
+  gap: 16px;
+  overflow-x: auto;
+  padding-bottom: 8px;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(233, 30, 99, 0.3) transparent;
+}
+
+.color-swatches-horizontal::-webkit-scrollbar {
+  height: 6px;
+}
+
+.color-swatches-horizontal::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.color-swatches-horizontal::-webkit-scrollbar-thumb {
+  background: rgba(233, 30, 99, 0.3);
+  border-radius: 3px;
+}
+
+.swatch-card {
+  flex-shrink: 0;
+  width: 160px;
+  background: #fff;
+  border-radius: 12px;
+  overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
+  transition: all 0.3s;
+}
+
+.swatch-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.swatch-preview {
+  width: 100%;
+  height: 80px;
+}
+
+.swatch-details {
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.swatch-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+}
+
+.swatch-purpose {
+  font-size: 12px;
+  color: #999;
+  line-height: 1.4;
+}
+
+@media (max-width: 600px) {
+  .color-swatches-horizontal {
+    gap: 12px;
+    margin: 0 -24px;
+    padding: 0 24px 8px;
+  }
+  
+  .swatch-card {
+    width: 140px;
+  }
+  
+  .swatch-preview {
+    height: 70px;
+  }
+  
+  .swatch-details {
+    padding: 10px;
+  }
 }
 </style>
