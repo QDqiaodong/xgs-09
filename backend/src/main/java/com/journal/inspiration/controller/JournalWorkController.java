@@ -27,10 +27,9 @@ public class JournalWorkController {
 
     @GetMapping("/{id}")
     public Result<WorkVO> detail(@PathVariable Long id, @RequestParam(required = false) Long userId) {
-        workService.incrementViewCount(id);
         WorkVO vo = workService.getWorkDetail(id, userId);
         if (vo == null) {
-            return Result.error(404, "作品不存在");
+            return Result.error(404, "作品不存在或无权限访问");
         }
         return Result.success(vo);
     }

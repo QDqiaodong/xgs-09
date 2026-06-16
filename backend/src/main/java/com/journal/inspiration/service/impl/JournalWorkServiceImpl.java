@@ -9,6 +9,7 @@ import com.journal.inspiration.dto.WorkPublishDTO;
 import com.journal.inspiration.dto.WorkQueryDTO;
 import com.journal.inspiration.common.ColorSchemeValidator;
 import com.journal.inspiration.common.CoverTypeEnum;
+import com.journal.inspiration.common.UserContext;
 import com.journal.inspiration.common.WorkStatusEnum;
 import com.journal.inspiration.entity.*;
 import com.journal.inspiration.mapper.*;
@@ -87,8 +88,17 @@ public class JournalWorkServiceImpl extends ServiceImpl<JournalWorkMapper, Journ
             return null;
         }
 
+        boolean isOwner = userId != null && work.getUserId().equals(userId);
+        if (!WorkStatusEnum.isVisibleToPublic(work.getStatus()) && !isOwner) {
+            return null;
+        }
+
+        if (WorkStatusEnum.isPublic(work.getStatus())) {
+            incrementViewCount(id);
+        }
+
         WorkVO vo = convertToVO(work);
-        
+
         if (userId != null) {
             vo.setIsFavorite(favoriteService.isFavorite(userId, id));
         }
@@ -100,9 +110,12 @@ public class JournalWorkServiceImpl extends ServiceImpl<JournalWorkMapper, Journ
     public Page<WorkVO> getWorkList(WorkQueryDTO dto) {
         LambdaQueryWrapper<JournalWork> wrapper = new LambdaQueryWrapper<>();
 
+        Long currentUserId = UserContext.getCurrentUserIdSafe();
+        boolean isViewingOwn = dto.getUserId() != null && dto.getUserId().equals(currentUserId);
+
         if (dto.getStatus() != null) {
             wrapper.eq(JournalWork::getStatus, dto.getStatus());
-        } else if (dto.getUserId() == null) {
+        } else if (dto.getUserId() == null || !isViewingOwn) {
             wrapper.eq(JournalWork::getStatus, WorkStatusEnum.PUBLIC.getCode());
         }
 
@@ -185,8 +198,14 @@ public class JournalWorkServiceImpl extends ServiceImpl<JournalWorkMapper, Journ
     public WorkStatsVO getUserWorkStats(Long userId) {
         WorkStatsVO stats = new WorkStatsVO();
 
+        Long currentUserId = UserContext.getCurrentUserIdSafe();
+        boolean isViewingOwn = userId != null && userId.equals(currentUserId);
+
         LambdaQueryWrapper<JournalWork> workWrapper = new LambdaQueryWrapper<>();
         workWrapper.eq(JournalWork::getUserId, userId);
+        if (!isViewingOwn) {
+            workWrapper.eq(JournalWork::getStatus, WorkStatusEnum.PUBLIC.getCode());
+        }
         List<JournalWork> allWorks = list(workWrapper);
 
         int total = allWorks.size();
@@ -204,28 +223,43 @@ public class JournalWorkServiceImpl extends ServiceImpl<JournalWorkMapper, Journ
             }
         }
 
-        stats.setTotalWorks(total);
-        stats.setPublicWorks(publicCount);
-        stats.setPrivateWorks(privateCount);
-        stats.setArchivedWorks(archivedCount);
+        if (isViewingOwn) {
+            stats.setTotalWorks(total);
+            stats.setPublicWorks(publicCount);
+            stats.setPrivateWorks(privateCount);
+            stats.setArchivedWorks(archivedCount);
 
-        List<StatusStatsVO> statusStatsList = new java.util.ArrayList<>();
-        for (WorkStatusEnum statusEnum : WorkStatusEnum.values()) {
-            StatusStatsVO statusStats = new StatusStatsVO();
-            statusStats.setStatus(statusEnum.getCode());
-            statusStats.setStatusDesc(statusEnum.getDesc());
-            int count = 0;
-            if (WorkStatusEnum.PUBLIC.equals(statusEnum)) {
-                count = publicCount;
-            } else if (WorkStatusEnum.PRIVATE.equals(statusEnum)) {
-                count = privateCount;
-            } else if (WorkStatusEnum.ARCHIVED.equals(statusEnum)) {
-                count = archivedCount;
+            List<StatusStatsVO> statusStatsList = new java.util.ArrayList<>();
+            for (WorkStatusEnum statusEnum : WorkStatusEnum.values()) {
+                StatusStatsVO statusStats = new StatusStatsVO();
+                statusStats.setStatus(statusEnum.getCode());
+                statusStats.setStatusDesc(statusEnum.getDesc());
+                int count = 0;
+                if (WorkStatusEnum.PUBLIC.equals(statusEnum)) {
+                    count = publicCount;
+                } else if (WorkStatusEnum.PRIVATE.equals(statusEnum)) {
+                    count = privateCount;
+                } else if (WorkStatusEnum.ARCHIVED.equals(statusEnum)) {
+                    count = archivedCount;
+                }
+                statusStats.setCount(count);
+                statusStatsList.add(statusStats);
             }
-            statusStats.setCount(count);
-            statusStatsList.add(statusStats);
+            stats.setStatusStats(statusStatsList);
+        } else {
+            stats.setTotalWorks(publicCount);
+            stats.setPublicWorks(publicCount);
+            stats.setPrivateWorks(0);
+            stats.setArchivedWorks(0);
+
+            List<StatusStatsVO> statusStatsList = new java.util.ArrayList<>();
+            StatusStatsVO publicStats = new StatusStatsVO();
+            publicStats.setStatus(WorkStatusEnum.PUBLIC.getCode());
+            publicStats.setStatusDesc(WorkStatusEnum.PUBLIC.getDesc());
+            publicStats.setCount(publicCount);
+            statusStatsList.add(publicStats);
+            stats.setStatusStats(statusStatsList);
         }
-        stats.setStatusStats(statusStatsList);
 
         if (!allWorks.isEmpty()) {
             List<Long> workIds = allWorks.stream()
