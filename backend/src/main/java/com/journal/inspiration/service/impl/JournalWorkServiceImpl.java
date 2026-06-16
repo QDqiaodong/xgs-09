@@ -7,6 +7,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.journal.inspiration.dto.WorkPublishDTO;
 import com.journal.inspiration.dto.WorkQueryDTO;
+import com.journal.inspiration.common.ColorSchemeValidator;
 import com.journal.inspiration.common.CoverTypeEnum;
 import com.journal.inspiration.common.WorkStatusEnum;
 import com.journal.inspiration.entity.*;
@@ -49,6 +50,11 @@ public class JournalWorkServiceImpl extends ServiceImpl<JournalWorkMapper, Journ
             if (categories.size() != dto.getCategoryIds().size()) {
                 throw new IllegalArgumentException("存在无效的分类编号");
             }
+        }
+
+        ColorSchemeValidator.ValidationResult colorValidation = ColorSchemeValidator.validate(dto.getColorScheme());
+        if (!colorValidation.isValid()) {
+            throw new IllegalArgumentException(colorValidation.getMessage());
         }
 
         JournalWork work = new JournalWork();

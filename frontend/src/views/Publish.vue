@@ -108,40 +108,157 @@
         
         <el-form-item label="配色方案">
           <div class="color-scheme-editor">
-            <div class="color-swatches">
-              <div 
-                v-for="(swatch, index) in colorSwatches" 
-                :key="index"
-                class="color-swatch-item"
-              >
-                <div class="swatch-color" :style="{ background: swatch.color }">
-                  <el-color-picker 
-                    v-model="swatch.color" 
-                    size="small"
-                    :show-alpha="false"
-                  />
-                </div>
-                <div class="swatch-info">
-                  <el-input 
-                    v-model="swatch.name" 
-                    placeholder="颜色名称" 
-                    size="small"
-                  />
-                  <el-input 
-                    v-model="swatch.purpose" 
-                    placeholder="用途说明" 
-                    size="small"
-                  />
-                </div>
-                <button class="remove-swatch" @click="removeColorSwatch(index)">
-                  <el-icon><Close /></el-icon>
-                </button>
+            <div class="color-type-section">
+              <div class="color-type-header">
+                <span class="type-label">主色 <span class="type-count">({{ primaryCount }}/{{ MAX_PRIMARY }})</span></span>
+                <span class="type-desc">主色调，决定整体氛围</span>
               </div>
+              <div class="color-swatches">
+                <div 
+                  v-for="(swatch, index) in primarySwatches" 
+                  :key="'p-' + index"
+                  class="color-swatch-item primary"
+                >
+                  <div class="swatch-color" :style="{ background: swatch.color }">
+                    <el-color-picker 
+                      v-model="swatch.color" 
+                      size="small"
+                      :show-alpha="false"
+                    />
+                  </div>
+                  <div class="swatch-info">
+                    <el-input 
+                      v-model="swatch.name" 
+                      placeholder="颜色名称" 
+                      size="small"
+                    />
+                    <el-input 
+                      v-model="swatch.purpose" 
+                      placeholder="用途说明" 
+                      size="small"
+                    />
+                  </div>
+                  <button 
+                    class="remove-swatch" 
+                    @click="removeColorSwatch(swatch, 'primary')"
+                    :disabled="primaryCount <= 1"
+                  >
+                    <el-icon><Close /></el-icon>
+                  </button>
+                </div>
+              </div>
+              <button 
+                class="add-swatch-btn small" 
+                @click="addColorSwatch('primary')"
+                :disabled="primaryCount >= MAX_PRIMARY"
+              >
+                <el-icon><Plus /></el-icon>
+                添加主色
+              </button>
             </div>
-            <button class="add-swatch-btn" @click="addColorSwatch">
-              <el-icon><Plus /></el-icon>
-              添加颜色
-            </button>
+
+            <div class="color-type-section">
+              <div class="color-type-header">
+                <span class="type-label">辅助色 <span class="type-count">({{ secondaryCount }}/{{ MAX_SECONDARY }})</span></span>
+                <span class="type-desc">搭配主色，丰富层次</span>
+              </div>
+              <div class="color-swatches">
+                <div 
+                  v-for="(swatch, index) in secondarySwatches" 
+                  :key="'s-' + index"
+                  class="color-swatch-item secondary"
+                >
+                  <div class="swatch-color" :style="{ background: swatch.color }">
+                    <el-color-picker 
+                      v-model="swatch.color" 
+                      size="small"
+                      :show-alpha="false"
+                    />
+                  </div>
+                  <div class="swatch-info">
+                    <el-input 
+                      v-model="swatch.name" 
+                      placeholder="颜色名称" 
+                      size="small"
+                    />
+                    <el-input 
+                      v-model="swatch.purpose" 
+                      placeholder="用途说明" 
+                      size="small"
+                    />
+                  </div>
+                  <button 
+                    class="remove-swatch" 
+                    @click="removeColorSwatch(swatch, 'secondary')"
+                    :disabled="secondaryCount <= 1"
+                  >
+                    <el-icon><Close /></el-icon>
+                  </button>
+                </div>
+              </div>
+              <button 
+                class="add-swatch-btn small" 
+                @click="addColorSwatch('secondary')"
+                :disabled="secondaryCount >= MAX_SECONDARY"
+              >
+                <el-icon><Plus /></el-icon>
+                添加辅助色
+              </button>
+            </div>
+
+            <div class="color-type-section">
+              <div class="color-type-header">
+                <span class="type-label">点缀色 <span class="type-count">({{ accentCount }}/{{ MAX_ACCENT }})</span></span>
+                <span class="type-desc">小面积使用，突出重点</span>
+              </div>
+              <div class="color-swatches">
+                <div 
+                  v-for="(swatch, index) in accentSwatches" 
+                  :key="'a-' + index"
+                  class="color-swatch-item accent"
+                >
+                  <div class="swatch-color" :style="{ background: swatch.color }">
+                    <el-color-picker 
+                      v-model="swatch.color" 
+                      size="small"
+                      :show-alpha="false"
+                    />
+                  </div>
+                  <div class="swatch-info">
+                    <el-input 
+                      v-model="swatch.name" 
+                      placeholder="颜色名称" 
+                      size="small"
+                    />
+                    <el-input 
+                      v-model="swatch.purpose" 
+                      placeholder="用途说明" 
+                      size="small"
+                    />
+                  </div>
+                  <button 
+                    class="remove-swatch" 
+                    @click="removeColorSwatch(swatch, 'accent')"
+                    :disabled="accentCount <= 0"
+                  >
+                    <el-icon><Close /></el-icon>
+                  </button>
+                </div>
+              </div>
+              <button 
+                class="add-swatch-btn small" 
+                @click="addColorSwatch('accent')"
+                :disabled="accentCount >= MAX_ACCENT"
+              >
+                <el-icon><Plus /></el-icon>
+                添加点缀色
+              </button>
+            </div>
+
+            <div class="color-scheme-tip" v-if="colorSchemeError">
+              <el-icon class="tip-icon"><Warning /></el-icon>
+              <span>{{ colorSchemeError }}</span>
+            </div>
           </div>
         </el-form-item>
         
@@ -166,10 +283,10 @@
 </template>
 
 <script setup>
-import { ref, reactive, onMounted, computed } from 'vue'
+import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Plus, Close, Check } from '@element-plus/icons-vue'
+import { Plus, Close, Check, Warning } from '@element-plus/icons-vue'
 import Header from '@/components/Header.vue'
 import { publishWork } from '@/api/work'
 import { getCategoryList } from '@/api/category'
@@ -182,11 +299,33 @@ const styleCategories = ref([])
 const sceneCategories = ref([])
 const coverTypeList = COVER_TYPE_LIST
 
-const colorSwatches = ref([
-  { color: '#FFB6C1', name: '主色调', purpose: '用于标题和重点内容' },
-  { color: '#98D8C8', name: '辅助色', purpose: '用于装饰和点缀' },
-  { color: '#FFF5EE', name: '背景色', purpose: '页面底色' }
+const MAX_PRIMARY = 2
+const MAX_SECONDARY = 4
+const MAX_ACCENT = 3
+const MIN_PRIMARY = 1
+const MIN_SECONDARY = 1
+const MAX_TOTAL = 8
+
+const HEX_COLOR_REGEX = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/
+
+const primarySwatches = ref([
+  { color: '#FFB6C1', name: '主色', purpose: '用于标题和重点内容', type: 'primary' }
 ])
+
+const secondarySwatches = ref([
+  { color: '#98D8C8', name: '辅助色', purpose: '用于装饰和点缀', type: 'secondary' }
+])
+
+const accentSwatches = ref([
+  { color: '#FFD700', name: '点缀色', purpose: '小面积强调', type: 'accent' }
+])
+
+const colorSchemeError = ref('')
+
+const primaryCount = computed(() => primarySwatches.value.length)
+const secondaryCount = computed(() => secondarySwatches.value.length)
+const accentCount = computed(() => accentSwatches.value.length)
+const totalCount = computed(() => primaryCount.value + secondaryCount.value + accentCount.value)
 
 const form = reactive({
   userId: 1,
@@ -200,24 +339,91 @@ const form = reactive({
   categoryIds: []
 })
 
-const addColorSwatch = () => {
-  colorSwatches.value.push({
+const addColorSwatch = (type) => {
+  const swatch = {
     color: '#FFFFFF',
     name: '',
-    purpose: ''
-  })
-}
-
-const removeColorSwatch = (index) => {
-  if (colorSwatches.value.length > 1) {
-    colorSwatches.value.splice(index, 1)
+    purpose: '',
+    type
+  }
+  
+  if (type === 'primary' && primaryCount.value < MAX_PRIMARY) {
+    primarySwatches.value.push(swatch)
+  } else if (type === 'secondary' && secondaryCount.value < MAX_SECONDARY) {
+    secondarySwatches.value.push(swatch)
+  } else if (type === 'accent' && accentCount.value < MAX_ACCENT) {
+    accentSwatches.value.push(swatch)
   }
 }
 
+const removeColorSwatch = (swatch, type) => {
+  if (type === 'primary' && primaryCount.value > MIN_PRIMARY) {
+    const index = primarySwatches.value.indexOf(swatch)
+    if (index > -1) primarySwatches.value.splice(index, 1)
+  } else if (type === 'secondary' && secondaryCount.value > MIN_SECONDARY) {
+    const index = secondarySwatches.value.indexOf(swatch)
+    if (index > -1) secondarySwatches.value.splice(index, 1)
+  } else if (type === 'accent' && accentCount.value > 0) {
+    const index = accentSwatches.value.indexOf(swatch)
+    if (index > -1) accentSwatches.value.splice(index, 1)
+  }
+}
+
+const isValidHexColor = (color) => {
+  return HEX_COLOR_REGEX.test(color)
+}
+
+const validateColorScheme = () => {
+  const allSwatches = [...primarySwatches.value, ...secondarySwatches.value, ...accentSwatches.value]
+  
+  if (primaryCount.value < MIN_PRIMARY) {
+    colorSchemeError.value = `至少需要 ${MIN_PRIMARY} 个主色`
+    return false
+  }
+  if (secondaryCount.value < MIN_SECONDARY) {
+    colorSchemeError.value = `至少需要 ${MIN_SECONDARY} 个辅助色`
+    return false
+  }
+  if (totalCount.value > MAX_TOTAL) {
+    colorSchemeError.value = `颜色总数不能超过 ${MAX_TOTAL} 个`
+    return false
+  }
+  
+  for (const swatch of allSwatches) {
+    if (!isValidHexColor(swatch.color)) {
+      colorSchemeError.value = `颜色 "${swatch.name || swatch.color}" 格式无效，请使用十六进制颜色`
+      return false
+    }
+  }
+  
+  const colors = allSwatches.map(s => s.color.toLowerCase())
+  const uniqueColors = [...new Set(colors)]
+  if (colors.length !== uniqueColors.length) {
+    colorSchemeError.value = '存在重复的颜色值'
+    return false
+  }
+  
+  colorSchemeError.value = ''
+  return true
+}
+
 const getColorSchemeJson = () => {
-  const validSwatches = colorSwatches.value.filter(s => s.name || s.purpose)
+  const allSwatches = [
+    ...primarySwatches.value.map(s => ({ ...s, type: 'primary' })),
+    ...secondarySwatches.value.map(s => ({ ...s, type: 'secondary' })),
+    ...accentSwatches.value.map(s => ({ ...s, type: 'accent' }))
+  ]
+  const validSwatches = allSwatches.filter(s => s.name || s.purpose)
   return JSON.stringify(validSwatches)
 }
+
+watch(
+  () => [...primarySwatches.value, ...secondarySwatches.value, ...accentSwatches.value],
+  () => {
+    validateColorScheme()
+  },
+  { deep: true }
+)
 
 const selectedCoverAspectRatio = computed(() => {
   const type = getCoverTypeByCode(form.coverType)
@@ -265,6 +471,11 @@ const handleSubmit = async () => {
     return
   }
   
+  if (!validateColorScheme()) {
+    ElMessage.warning(colorSchemeError.value || '色彩方案校验失败')
+    return
+  }
+  
   form.colorScheme = getColorSchemeJson()
   
   submitting.value = true
@@ -274,6 +485,7 @@ const handleSubmit = async () => {
     router.push('/')
   } catch (e) {
     console.error(e)
+    ElMessage.error(e.message || '发布失败，请重试')
   } finally {
     submitting.value = false
   }
@@ -512,23 +724,72 @@ onMounted(() => {
 .color-scheme-editor {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 20px;
+}
+
+.color-type-section {
+  padding: 16px;
+  background: #fafafa;
+  border-radius: 10px;
+  border: 1px solid #eee;
+}
+
+.color-type-section.primary {
+  border-left: 4px solid #ff6b9d;
+}
+
+.color-type-section.secondary {
+  border-left: 4px solid #4a9eff;
+}
+
+.color-type-section.accent {
+  border-left: 4px solid #ffc107;
+}
+
+.color-type-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+}
+
+.type-label {
+  font-size: 15px;
+  font-weight: 600;
+  color: #333;
+}
+
+.type-count {
+  font-size: 13px;
+  color: #999;
+  font-weight: 400;
+}
+
+.type-desc {
+  font-size: 12px;
+  color: #999;
 }
 
 .color-swatches {
   display: flex;
   flex-direction: column;
-  gap: 12px;
+  gap: 10px;
+  margin-bottom: 12px;
 }
 
 .color-swatch-item {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 12px;
-  background: #fafafa;
+  padding: 10px;
+  background: #fff;
   border-radius: 8px;
   border: 1px solid #eee;
+  transition: all 0.3s;
+}
+
+.color-swatch-item:hover {
+  border-color: #ddd;
 }
 
 .swatch-color {
@@ -547,7 +808,7 @@ onMounted(() => {
   flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 8px;
+  gap: 6px;
 }
 
 .remove-swatch {
@@ -565,8 +826,14 @@ onMounted(() => {
   transition: all 0.3s;
 }
 
-.remove-swatch:hover {
+.remove-swatch:hover:not(:disabled) {
   background: #ff5252;
+}
+
+.remove-swatch:disabled {
+  background: #ffcccc;
+  cursor: not-allowed;
+  opacity: 0.6;
 }
 
 .add-swatch-btn {
@@ -574,20 +841,46 @@ onMounted(() => {
   align-items: center;
   justify-content: center;
   gap: 6px;
-  padding: 12px;
+  padding: 10px;
   border: 2px dashed #d9d9d9;
   border-radius: 8px;
-  background: #fafafa;
+  background: #fff;
   color: #999;
-  font-size: 14px;
+  font-size: 13px;
   cursor: pointer;
   transition: all 0.3s;
 }
 
-.add-swatch-btn:hover {
+.add-swatch-btn:hover:not(:disabled) {
   border-color: #ff9a9e;
   color: #ff6b9d;
   background: #fff5f8;
+}
+
+.add-swatch-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.add-swatch-btn.small {
+  padding: 8px;
+  font-size: 12px;
+}
+
+.color-scheme-tip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: #fff3cd;
+  border-radius: 8px;
+  color: #856404;
+  font-size: 13px;
+}
+
+.tip-icon {
+  font-size: 18px;
+  flex-shrink: 0;
 }
 
 @media (max-width: 600px) {
@@ -597,6 +890,12 @@ onMounted(() => {
   
   .swatch-info {
     width: calc(100% - 60px);
+  }
+  
+  .color-type-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 4px;
   }
 }
 </style>
