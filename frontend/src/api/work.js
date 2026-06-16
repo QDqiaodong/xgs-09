@@ -40,11 +40,11 @@ export const publishWork = (data) => {
   })
 }
 
-export const updateWorkStatus = (id, status, operatorId) => {
+export const updateWorkStatus = (id, status) => {
   return request({
     url: `/works/${id}/status`,
     method: 'put',
-    params: { status, operatorId }
+    params: { status }
   })
 }
 

@@ -2,6 +2,7 @@ package com.journal.inspiration.controller;
 
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.journal.inspiration.common.Result;
+import com.journal.inspiration.common.UserContext;
 import com.journal.inspiration.dto.WorkPublishDTO;
 import com.journal.inspiration.dto.WorkQueryDTO;
 import com.journal.inspiration.service.JournalWorkService;
@@ -59,9 +60,9 @@ public class JournalWorkController {
 
     @PutMapping("/{id}/status")
     public Result<Boolean> updateStatus(@PathVariable Long id,
-                                        @RequestParam Integer status,
-                                        @RequestParam Long operatorId) {
+                                        @RequestParam Integer status) {
         try {
+            Long operatorId = UserContext.getCurrentUserId();
             return Result.success(workService.updateWorkStatus(id, status, operatorId));
         } catch (IllegalArgumentException e) {
             return Result.error(400, e.getMessage());

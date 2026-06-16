@@ -1,5 +1,6 @@
 import axios from 'axios'
 import { ElMessage } from 'element-plus'
+import { getCurrentUserId } from './userStore'
 
 const service = axios.create({
   baseURL: '/api',
@@ -8,6 +9,10 @@ const service = axios.create({
 
 service.interceptors.request.use(
   config => {
+    const userId = getCurrentUserId()
+    if (userId) {
+      config.headers['X-User-Id'] = userId
+    }
     return config
   },
   error => {
@@ -24,6 +29,7 @@ service.interceptors.response.use(
       }
       const err = new Error(res.message || '请求失败')
       err.code = res.code
+      err.data = res.data
       return Promise.reject(err)
     }
     return res

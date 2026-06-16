@@ -6,21 +6,11 @@
       <div v-if="error" class="state-container">
         <el-result icon="error" :title="errorTitle" :sub-title="errorSubtitle">
           <template #extra>
-            <el-button type="primary" @click="loadDetail">重新加载</el-button>
+            <el-button v-if="!isNotFoundError" type="primary" @click="loadDetail">重新加载</el-button>
             <el-button @click="goHome">返回首页</el-button>
           </template>
         </el-result>
       </div>
-
-      <template v-else-if="!loading && !work">
-        <div class="state-container">
-          <el-result icon="warning" title="作品不存在" sub-title="该作品可能已被删除或链接无效">
-            <template #extra>
-              <el-button type="primary" @click="goHome">返回首页</el-button>
-            </template>
-          </el-result>
-        </div>
-      </template>
 
       <template v-else-if="work">
         <div class="detail-header">
@@ -130,6 +120,7 @@ const isFavorite = ref(false)
 const error = ref(null)
 const errorTitle = ref('')
 const errorSubtitle = ref('')
+const isNotFoundError = ref(false)
 const defaultImage = 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&h=500&fit=crop'
 
 const workLayoutConfig = computed(() => {
@@ -150,26 +141,26 @@ const loadDetail = async () => {
   loading.value = true
   work.value = null
   error.value = null
+  isNotFoundError.value = false
   try {
     const res = await getWorkDetail(route.params.id, 1)
     work.value = res.data
     isFavorite.value = res.data?.isFavorite || false
   } catch (e) {
+    error.value = e
     if (e.code === 404 || (e.message && e.message === '作品不存在')) {
-      error.value = null
-      work.value = null
+      isNotFoundError.value = true
+      errorTitle.value = '作品不存在'
+      errorSubtitle.value = '该作品可能已被删除或链接无效'
+    } else if (e.message && e.message.includes('Network')) {
+      errorTitle.value = '网络异常'
+      errorSubtitle.value = '请检查您的网络连接后重试'
+    } else if (e.message && e.message.includes('timeout')) {
+      errorTitle.value = '请求超时'
+      errorSubtitle.value = '服务器响应超时，请稍后再试'
     } else {
-      error.value = e
-      if (e.message && e.message.includes('Network')) {
-        errorTitle.value = '网络异常'
-        errorSubtitle.value = '请检查您的网络连接后重试'
-      } else if (e.message && e.message.includes('timeout')) {
-        errorTitle.value = '请求超时'
-        errorSubtitle.value = '服务器响应超时，请稍后再试'
-      } else {
-        errorTitle.value = '加载失败'
-        errorSubtitle.value = e.message || '数据加载异常，请稍后再试'
-      }
+      errorTitle.value = '加载失败'
+      errorSubtitle.value = e.message || '数据加载异常，请稍后再试'
     }
   } finally {
     loading.value = false

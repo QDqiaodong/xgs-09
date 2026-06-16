@@ -275,7 +275,7 @@ const changeWorkStatus = async (work, status) => {
       type: 'warning'
     })
     
-    await updateWorkStatus(work.id, status, userId.value)
+    await updateWorkStatus(work.id, status)
     work.status = status
     ElMessage.success(`状态已改为「${statusDesc}」`)
     loadWorkStats()
