@@ -8,6 +8,7 @@ import com.journal.inspiration.dto.WorkQueryDTO;
 import com.journal.inspiration.service.JournalWorkService;
 import com.journal.inspiration.vo.WorkStatsVO;
 import com.journal.inspiration.vo.WorkVO;
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.web.bind.annotation.*;
 
@@ -19,18 +20,18 @@ public class JournalWorkController {
     private final JournalWorkService workService;
 
     @PostMapping
-    public Result<Long> publish(@RequestBody WorkPublishDTO dto) {
+    public Result<Long> publish(@Valid @RequestBody WorkPublishDTO dto) {
         Long id = workService.publishWork(dto);
         return Result.success(id);
     }
 
     @GetMapping("/{id}")
     public Result<WorkVO> detail(@PathVariable Long id, @RequestParam(required = false) Long userId) {
+        workService.incrementViewCount(id);
         WorkVO vo = workService.getWorkDetail(id, userId);
         if (vo == null) {
             return Result.error(404, "作品不存在");
         }
-        workService.incrementViewCount(id);
         return Result.success(vo);
     }
 

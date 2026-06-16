@@ -39,6 +39,18 @@ public class JournalWorkServiceImpl extends ServiceImpl<JournalWorkMapper, Journ
     @Transactional(rollbackFor = Exception.class)
     @CacheEvict(value = {"latestWorks", "hotWorks"}, allEntries = true)
     public Long publishWork(WorkPublishDTO dto) {
+        User user = userMapper.selectById(dto.getUserId());
+        if (user == null) {
+            throw new IllegalArgumentException("用户不存在");
+        }
+
+        if (dto.getCategoryIds() != null && !dto.getCategoryIds().isEmpty()) {
+            List<Category> categories = categoryMapper.selectBatchIds(dto.getCategoryIds());
+            if (categories.size() != dto.getCategoryIds().size()) {
+                throw new IllegalArgumentException("存在无效的分类编号");
+            }
+        }
+
         JournalWork work = new JournalWork();
         BeanUtil.copyProperties(dto, work);
         if (work.getCoverType() == null || CoverTypeEnum.getByCode(work.getCoverType()) == null) {
@@ -160,12 +172,7 @@ public class JournalWorkServiceImpl extends ServiceImpl<JournalWorkMapper, Journ
 
     @Override
     public boolean incrementViewCount(Long id) {
-        JournalWork work = getById(id);
-        if (work != null) {
-            work.setViewCount(work.getViewCount() + 1);
-            return updateById(work);
-        }
-        return false;
+        return baseMapper.incrementViewCountById(id) > 0;
     }
 
     @Override
