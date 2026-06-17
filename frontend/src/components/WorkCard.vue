@@ -49,6 +49,12 @@
           +{{ (work.categories || []).length - 3 }}
         </span>
       </div>
+      <ColorPaletteWall
+        v-if="work.colorScheme"
+        :color-scheme="work.colorScheme"
+        mode="compact"
+        class="card-palette"
+      />
       <div class="card-footer">
         <div class="author">
           <img :src="work.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=default'" alt="" />
@@ -66,6 +72,7 @@ import { View, Star } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
 import { getCoverTypeByCode } from '@/constants/coverTypes'
 import { getStyleConfig } from '@/constants/styleTagConfig'
+import ColorPaletteWall from '@/components/ColorPaletteWall.vue'
 
 const props = defineProps({
   work: {
@@ -268,6 +275,11 @@ const formatDate = (date) => {
 .tag-more {
   background: #f5f5f5;
   color: #999;
+}
+
+.card-palette {
+  margin-bottom: 8px;
+  flex-shrink: 0;
 }
 
 .card-footer {

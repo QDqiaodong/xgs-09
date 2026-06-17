@@ -109,92 +109,13 @@
           <div class="color-section" v-if="work.colorScheme">
             <div class="section-header">
               <el-icon class="section-icon"><Brush /></el-icon>
-              <h3 class="section-title">色彩方案</h3>
+              <h3 class="section-title">色票墙</h3>
             </div>
-            <template v-if="validColorSwatches.length > 0">
-              <div class="color-groups">
-                <div class="color-group" v-if="primarySwatches.length > 0">
-                  <div class="group-label primary">
-                    <span class="label-text">主色</span>
-                    <span class="label-count">{{ primarySwatches.length }}</span>
-                  </div>
-                  <div class="group-swatches">
-                    <div 
-                      v-for="(swatch, index) in primarySwatches" 
-                      :key="'p-' + index"
-                      class="swatch-card"
-                    >
-                      <div class="swatch-preview" :style="{ background: swatch.color }"></div>
-                      <div class="swatch-details">
-                        <span class="swatch-name">{{ swatch.name }}</span>
-                        <span class="swatch-purpose">{{ swatch.purpose }}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="color-group" v-if="secondarySwatches.length > 0">
-                  <div class="group-label secondary">
-                    <span class="label-text">辅助色</span>
-                    <span class="label-count">{{ secondarySwatches.length }}</span>
-                  </div>
-                  <div class="group-swatches">
-                    <div 
-                      v-for="(swatch, index) in secondarySwatches" 
-                      :key="'s-' + index"
-                      class="swatch-card"
-                    >
-                      <div class="swatch-preview" :style="{ background: swatch.color }"></div>
-                      <div class="swatch-details">
-                        <span class="swatch-name">{{ swatch.name }}</span>
-                        <span class="swatch-purpose">{{ swatch.purpose }}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="color-group" v-if="accentSwatches.length > 0">
-                  <div class="group-label accent">
-                    <span class="label-text">点缀色</span>
-                    <span class="label-count">{{ accentSwatches.length }}</span>
-                  </div>
-                  <div class="group-swatches">
-                    <div 
-                      v-for="(swatch, index) in accentSwatches" 
-                      :key="'a-' + index"
-                      class="swatch-card"
-                    >
-                      <div class="swatch-preview" :style="{ background: swatch.color }"></div>
-                      <div class="swatch-details">
-                        <span class="swatch-name">{{ swatch.name }}</span>
-                        <span class="swatch-purpose">{{ swatch.purpose }}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-
-                <div class="color-group" v-if="untypedSwatches.length > 0">
-                  <div class="group-label other">
-                    <span class="label-text">其他</span>
-                    <span class="label-count">{{ untypedSwatches.length }}</span>
-                  </div>
-                  <div class="group-swatches">
-                    <div 
-                      v-for="(swatch, index) in untypedSwatches" 
-                      :key="'u-' + index"
-                      class="swatch-card"
-                    >
-                      <div class="swatch-preview" :style="{ background: swatch.color }"></div>
-                      <div class="swatch-details">
-                        <span class="swatch-name">{{ swatch.name }}</span>
-                        <span class="swatch-purpose">{{ swatch.purpose }}</span>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </template>
-            <div v-else class="section-content">{{ work.colorScheme }}</div>
+            <ColorPaletteWall
+              :color-scheme="work.colorScheme"
+              mode="expanded"
+            />
+            <div v-if="!hasValidSwatches" class="section-content">{{ work.colorScheme }}</div>
           </div>
         </div>
       </template>
@@ -209,6 +130,7 @@ import { View, Star, Share, MagicStick, Grid, Brush, Picture } from '@element-pl
 import { ElMessage } from 'element-plus'
 import Header from '@/components/Header.vue'
 import LayoutGridPreviewer from '@/components/LayoutGridPreviewer.vue'
+import ColorPaletteWall from '@/components/ColorPaletteWall.vue'
 import { getWorkDetail } from '@/api/work'
 import { toggleFavorite } from '@/api/favorite'
 import { getDefaultLayout } from '@/constants/layoutTemplates'
@@ -270,45 +192,21 @@ const workLayoutConfig = computed(() => {
   return getDefaultLayout(work.value.categories)
 })
 
-const colorSwatches = computed(() => {
-  if (!work.value || !work.value.colorScheme) return []
+const HEX_COLOR_REGEX = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/
+
+const hasValidSwatches = computed(() => {
+  if (!work.value || !work.value.colorScheme) return false
   try {
     const parsed = JSON.parse(work.value.colorScheme)
     if (Array.isArray(parsed) && parsed.length > 0 && parsed[0].color) {
-      return parsed
+      return parsed.some(s =>
+        HEX_COLOR_REGEX.test(s.color) && (s.name || s.purpose)
+      )
     }
-    return []
+    return false
   } catch (e) {
-    return []
+    return false
   }
-})
-
-const HEX_COLOR_REGEX = /^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$/
-
-const isValidHexColor = (color) => {
-  return typeof color === 'string' && HEX_COLOR_REGEX.test(color)
-}
-
-const validColorSwatches = computed(() => {
-  return colorSwatches.value.filter(swatch => 
-    isValidHexColor(swatch.color) && (swatch.name || swatch.purpose)
-  )
-})
-
-const primarySwatches = computed(() => {
-  return validColorSwatches.value.filter(s => s.type === 'primary')
-})
-
-const secondarySwatches = computed(() => {
-  return validColorSwatches.value.filter(s => s.type === 'secondary')
-})
-
-const accentSwatches = computed(() => {
-  return validColorSwatches.value.filter(s => s.type === 'accent')
-})
-
-const untypedSwatches = computed(() => {
-  return validColorSwatches.value.filter(s => !s.type || !['primary', 'secondary', 'accent'].includes(s.type))
 })
 
 const loadDetail = async () => {
@@ -630,142 +528,5 @@ watch(
   color: #555;
   font-size: 15px;
   white-space: pre-wrap;
-}
-
-.color-groups {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.color-group {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.group-label {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  font-size: 14px;
-  font-weight: 600;
-  color: #333;
-  padding-left: 8px;
-  border-left: 3px solid #e91e63;
-}
-
-.group-label.primary {
-  border-left-color: #ff6b9d;
-  color: #ad1457;
-}
-
-.group-label.secondary {
-  border-left-color: #4a9eff;
-  color: #1565c0;
-}
-
-.group-label.accent {
-  border-left-color: #ffc107;
-  color: #ff8f00;
-}
-
-.group-label.other {
-  border-left-color: #9e9e9e;
-  color: #616161;
-}
-
-.label-text {
-  font-size: 14px;
-}
-
-.label-count {
-  font-size: 12px;
-  font-weight: 400;
-  color: #999;
-  background: #fff;
-  padding: 2px 8px;
-  border-radius: 10px;
-}
-
-.group-swatches {
-  display: flex;
-  gap: 12px;
-  overflow-x: auto;
-  padding-bottom: 4px;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(233, 30, 99, 0.3) transparent;
-}
-
-.group-swatches::-webkit-scrollbar {
-  height: 4px;
-}
-
-.group-swatches::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.group-swatches::-webkit-scrollbar-thumb {
-  background: rgba(233, 30, 99, 0.2);
-  border-radius: 2px;
-}
-
-.swatch-card {
-  flex-shrink: 0;
-  width: 160px;
-  background: #fff;
-  border-radius: 12px;
-  overflow: hidden;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.06);
-  transition: all 0.3s;
-}
-
-.swatch-card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-}
-
-.swatch-preview {
-  width: 100%;
-  height: 80px;
-}
-
-.swatch-details {
-  padding: 12px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.swatch-name {
-  font-size: 14px;
-  font-weight: 600;
-  color: #333;
-}
-
-.swatch-purpose {
-  font-size: 12px;
-  color: #999;
-  line-height: 1.4;
-}
-
-@media (max-width: 600px) {
-  .color-swatches-horizontal {
-    gap: 12px;
-    margin: 0 -24px;
-    padding: 0 24px 8px;
-  }
-  
-  .swatch-card {
-    width: 140px;
-  }
-  
-  .swatch-preview {
-    height: 70px;
-  }
-  
-  .swatch-details {
-    padding: 10px;
-  }
 }
 </style>
