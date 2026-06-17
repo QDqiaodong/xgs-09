@@ -96,6 +96,22 @@
             </div>
           </div>
         </el-form-item>
+
+        <el-form-item label="版式网格">
+          <div class="layout-config-section">
+            <div class="layout-config-preview">
+              <LayoutGridPreviewer :layout-config="currentLayoutConfig" />
+            </div>
+            <div class="layout-config-tip" v-if="form.categoryIds.length > 0">
+              <el-icon class="tip-icon"><InfoFilled /></el-icon>
+              <span>已根据您选择的「{{ selectedCategoryNames }}」自动匹配版式</span>
+            </div>
+            <div class="layout-config-tip warning" v-else>
+              <el-icon class="tip-icon"><Warning /></el-icon>
+              <span>请先选择排版风格或应用场景，系统将自动匹配对应的版式网格</span>
+            </div>
+          </div>
+        </el-form-item>
         
         <el-form-item label="排版思路">
           <el-input 
@@ -286,11 +302,13 @@
 import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Plus, Close, Check, Warning } from '@element-plus/icons-vue'
+import { Plus, Close, Check, Warning, InfoFilled } from '@element-plus/icons-vue'
 import Header from '@/components/Header.vue'
+import LayoutGridPreviewer from '@/components/LayoutGridPreviewer.vue'
 import { publishWork } from '@/api/work'
 import { getCategoryList } from '@/api/category'
 import { COVER_TYPE_LIST, DEFAULT_COVER_TYPE, getCoverTypeByCode } from '@/constants/coverTypes'
+import { getDefaultLayout } from '@/constants/layoutTemplates'
 
 const router = useRouter()
 const formRef = ref(null)
@@ -334,10 +352,51 @@ const form = reactive({
   coverType: DEFAULT_COVER_TYPE.code,
   content: '',
   layoutIdea: '',
+  layoutConfig: '',
   colorScheme: '',
   inspiration: '',
   categoryIds: []
 })
+
+const selectedCategories = computed(() => {
+  const allCategories = [...styleCategories.value, ...sceneCategories.value]
+  return allCategories.filter(cat => form.categoryIds.includes(cat.id))
+})
+
+const selectedCategoryNames = computed(() => {
+  return selectedCategories.value.map(cat => cat.name).join('、')
+})
+
+const currentLayoutConfig = computed(() => {
+  if (!form.layoutConfig) {
+    return getDefaultLayout(selectedCategories.value)
+  }
+  try {
+    return typeof form.layoutConfig === 'string'
+      ? JSON.parse(form.layoutConfig)
+      : form.layoutConfig
+  } catch (e) {
+    return getDefaultLayout(selectedCategories.value)
+  }
+})
+
+const generateLayoutConfig = () => {
+  const categories = selectedCategories.value.map(cat => ({
+    id: cat.id,
+    name: cat.name,
+    type: cat.type
+  }))
+  const layout = getDefaultLayout(categories)
+  form.layoutConfig = JSON.stringify(layout)
+}
+
+watch(
+  () => form.categoryIds,
+  () => {
+    generateLayoutConfig()
+  },
+  { deep: true }
+)
 
 const addColorSwatch = (type) => {
   const swatch = {
@@ -477,6 +536,10 @@ const handleSubmit = async () => {
   }
   
   form.colorScheme = getColorSchemeJson()
+  
+  if (!form.layoutConfig) {
+    generateLayoutConfig()
+  }
   
   submitting.value = true
   try {
@@ -881,6 +944,41 @@ onMounted(() => {
 .tip-icon {
   font-size: 18px;
   flex-shrink: 0;
+}
+
+.layout-config-section {
+  width: 100%;
+}
+
+.layout-config-preview {
+  margin-bottom: 12px;
+}
+
+.layout-config-tip {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 12px 16px;
+  background: #ecf5ff;
+  border-radius: 8px;
+  color: #409eff;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.layout-config-tip .tip-icon {
+  flex-shrink: 0;
+  font-size: 18px;
+  margin-top: 1px;
+}
+
+.layout-config-tip.warning {
+  background: #fdf6ec;
+  color: #e6a23c;
+}
+
+.layout-config-tip.warning .tip-icon {
+  color: #e6a23c;
 }
 
 @media (max-width: 600px) {
