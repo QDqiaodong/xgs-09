@@ -152,7 +152,8 @@ const loadWorks = async (reset = false) => {
       works.value = [...works.value, ...newWorks]
     }
     
-    hasMore.value = newWorks.length === pageSize.value
+    const total = res.data?.total || 0
+    hasMore.value = works.value.length < total
   } finally {
     loading.value = false
     loadingMore.value = false

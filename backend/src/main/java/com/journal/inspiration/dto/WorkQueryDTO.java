@@ -9,6 +9,10 @@ public class WorkQueryDTO {
 
     private String categoryType;
 
+    private Long styleCategoryId;
+
+    private Long sceneCategoryId;
+
     private String keyword;
 
     private Long userId;

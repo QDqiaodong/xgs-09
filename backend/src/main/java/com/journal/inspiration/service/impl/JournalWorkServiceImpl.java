@@ -128,6 +128,14 @@ public class JournalWorkServiceImpl extends ServiceImpl<JournalWorkMapper, Journ
             wrapper.eq(JournalWork::getUserId, dto.getUserId());
         }
 
+        List<Long> filteredWorkIds = collectWorkIdsByCategories(dto);
+        if (filteredWorkIds != null) {
+            if (filteredWorkIds.isEmpty()) {
+                return new Page<>(dto.getPageNum(), dto.getPageSize(), 0);
+            }
+            wrapper.in(JournalWork::getId, filteredWorkIds);
+        }
+
         wrapper.orderByDesc(JournalWork::getCreateTime);
 
         Page<JournalWork> page = page(new Page<>(dto.getPageNum(), dto.getPageSize()), wrapper);
@@ -135,6 +143,42 @@ public class JournalWorkServiceImpl extends ServiceImpl<JournalWorkMapper, Journ
         voPage.setRecords(page.getRecords().stream().map(this::convertToVO).collect(Collectors.toList()));
 
         return voPage;
+    }
+
+    private List<Long> collectWorkIdsByCategories(WorkQueryDTO dto) {
+        List<Long> categoryIds = new java.util.ArrayList<>();
+
+        if (dto.getStyleCategoryId() != null) {
+            categoryIds.add(dto.getStyleCategoryId());
+        }
+        if (dto.getSceneCategoryId() != null) {
+            categoryIds.add(dto.getSceneCategoryId());
+        }
+        if (dto.getCategoryId() != null) {
+            categoryIds.add(dto.getCategoryId());
+        }
+
+        if (categoryIds.isEmpty()) {
+            return null;
+        }
+
+        LambdaQueryWrapper<WorkCategory> wcWrapper = new LambdaQueryWrapper<>();
+        wcWrapper.in(WorkCategory::getCategoryId, categoryIds);
+        List<WorkCategory> workCategories = workCategoryMapper.selectList(wcWrapper);
+
+        if (workCategories.isEmpty()) {
+            return new java.util.ArrayList<>();
+        }
+
+        java.util.Map<Long, Long> workCategoryCountMap = workCategories.stream()
+                .collect(Collectors.groupingBy(WorkCategory::getWorkId, Collectors.counting()));
+
+        long requiredMatchCount = categoryIds.size();
+
+        return workCategoryCountMap.entrySet().stream()
+                .filter(entry -> entry.getValue() >= requiredMatchCount)
+                .map(java.util.Map.Entry::getKey)
+                .collect(Collectors.toList());
     }
 
     @Override

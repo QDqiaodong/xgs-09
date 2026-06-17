@@ -163,17 +163,15 @@ const loadWorks = async (reset = false) => {
       status: 1
     }
     
-    const res = await getWorkList(params)
-    let newWorks = res.data?.records || []
-    
-    if (selectedStyle.value || selectedScene.value) {
-      newWorks = newWorks.filter(work => {
-        const cats = work.categories || []
-        const styleMatch = !selectedStyle.value || cats.some(c => c.id === selectedStyle.value)
-        const sceneMatch = !selectedScene.value || cats.some(c => c.id === selectedScene.value)
-        return styleMatch && sceneMatch
-      })
+    if (selectedStyle.value) {
+      params.styleCategoryId = selectedStyle.value
     }
+    if (selectedScene.value) {
+      params.sceneCategoryId = selectedScene.value
+    }
+    
+    const res = await getWorkList(params)
+    const newWorks = res.data?.records || []
     
     if (reset) {
       works.value = newWorks
@@ -181,7 +179,8 @@ const loadWorks = async (reset = false) => {
       works.value = [...works.value, ...newWorks]
     }
     
-    hasMore.value = res.data?.records?.length === pageSize.value
+    const total = res.data?.total || 0
+    hasMore.value = works.value.length < total
   } finally {
     loading.value = false
     loadingMore.value = false
