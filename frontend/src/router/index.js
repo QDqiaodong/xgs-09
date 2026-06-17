@@ -36,6 +36,18 @@ const routes = [
     name: 'Favorites',
     component: () => import('@/views/Favorites.vue'),
     meta: { title: '我的收藏' }
+  },
+  {
+    path: '/scenes',
+    name: 'SceneGallery',
+    component: () => import('@/views/SceneGallery.vue'),
+    meta: { title: '场景分类' }
+  },
+  {
+    path: '/scene-board',
+    name: 'SceneBoard',
+    component: () => import('@/views/SceneBoard.vue'),
+    meta: { title: '场景任务板' }
   }
 ]
 

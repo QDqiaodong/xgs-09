@@ -8,6 +8,7 @@
       
       <nav class="nav">
         <router-link to="/" class="nav-link">首页</router-link>
+        <router-link to="/scenes" class="nav-link">场景灵感</router-link>
         <router-link to="/category" class="nav-link">分类浏览</router-link>
         <router-link to="/favorites" class="nav-link">我的收藏</router-link>
       </nav>

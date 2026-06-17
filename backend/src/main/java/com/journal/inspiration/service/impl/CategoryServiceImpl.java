@@ -9,6 +9,7 @@ import com.journal.inspiration.entity.WorkCategory;
 import com.journal.inspiration.mapper.CategoryMapper;
 import com.journal.inspiration.mapper.WorkCategoryMapper;
 import com.journal.inspiration.service.CategoryService;
+import com.journal.inspiration.service.SceneTaskService;
 import com.journal.inspiration.vo.CategoryVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -21,6 +22,7 @@ import java.util.stream.Collectors;
 public class CategoryServiceImpl extends ServiceImpl<CategoryMapper, Category> implements CategoryService {
 
     private final WorkCategoryMapper workCategoryMapper;
+    private final SceneTaskService sceneTaskService;
 
     @Override
     public List<CategoryVO> getCategoryList(String type) {
@@ -34,6 +36,12 @@ public class CategoryServiceImpl extends ServiceImpl<CategoryMapper, Category> i
                 .map(cat -> {
                     CategoryVO vo = new CategoryVO();
                     BeanUtil.copyProperties(cat, vo);
+                    vo.setWorkCount(workCategoryMapper.countWorksByCategoryId(cat.getId()));
+                    if ("scene".equals(cat.getType())) {
+                        vo.setTaskCount(sceneTaskService.countBySceneCategoryId(cat.getId()));
+                    } else {
+                        vo.setTaskCount(0);
+                    }
                     return vo;
                 })
                 .collect(Collectors.toList());

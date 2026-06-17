@@ -12,4 +12,12 @@ public class CategoryVO {
     private String type;
 
     private String icon;
+
+    private String description;
+
+    private String bannerColor;
+
+    private Integer workCount;
+
+    private Integer taskCount;
 }
