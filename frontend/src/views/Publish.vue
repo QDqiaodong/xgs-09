@@ -6,293 +6,359 @@
       <h1 class="page-title">发布手账作品</h1>
       
       <el-form :model="form" ref="formRef" label-width="100px" class="publish-form">
-        <el-form-item label="作品标题" prop="title">
-          <el-input v-model="form.title" placeholder="请输入作品标题" maxlength="50" show-word-limit />
-        </el-form-item>
-        
-        <el-form-item label="封面图片" prop="coverImage">
-          <div class="cover-upload-section">
-            <div 
-              class="image-upload"
-              :style="{ aspectRatio: selectedCoverAspectRatio }"
-            >
-              <div v-if="form.coverImage" class="image-preview">
-                <img :src="form.coverImage" alt="" />
-                <button class="remove-btn" @click="form.coverImage = ''">
-                  <el-icon><Close /></el-icon>
-                </button>
-              </div>
-              <div v-else class="upload-placeholder" @click="uploadImage">
-                <el-icon><Plus /></el-icon>
-                <span>上传封面图片</span>
-              </div>
+
+        <section class="form-section">
+          <div class="section-header">
+            <div class="section-icon icon-basic">
+              <el-icon><Document /></el-icon>
+            </div>
+            <div class="section-title-wrap">
+              <h2 class="section-title">基础信息</h2>
+              <p class="section-desc">填写作品的基本资料，让别人快速了解你的手账</p>
             </div>
           </div>
-        </el-form-item>
+          <div class="section-body">
+            <el-form-item label="作品标题" prop="title">
+              <el-input v-model="form.title" placeholder="请输入作品标题" maxlength="50" show-word-limit />
+            </el-form-item>
 
-        <el-form-item label="封面比例">
-          <div class="cover-type-selector">
-            <div 
-              v-for="type in coverTypeList" 
-              :key="type.code"
-              class="cover-type-option"
-              :class="{ active: form.coverType === type.code }"
-              @click="selectCoverType(type.code)"
-            >
-              <div class="cover-type-preview" :style="{ aspectRatio: `${type.widthRatio} / ${type.heightRatio}` }">
-                <div class="preview-inner">
-                  <span class="ratio-text">{{ type.widthRatio }}:{{ type.heightRatio }}</span>
+            <el-form-item label="作品内容">
+              <el-input 
+                v-model="form.content" 
+                type="textarea" 
+                :rows="5"
+                placeholder="描述你的手账作品内容..."
+              />
+            </el-form-item>
+
+            <el-form-item label="分类标签">
+              <div class="category-section">
+                <div class="category-group">
+                  <span class="group-label">排版风格</span>
+                  <div class="category-chips">
+                    <span 
+                      v-for="cat in styleCategories" 
+                      :key="cat.id"
+                      class="chip"
+                      :class="{ active: form.categoryIds.includes(cat.id) }"
+                      @click="toggleCategory(cat.id)"
+                    >
+                      {{ cat.name }}
+                    </span>
+                  </div>
+                </div>
+                <div class="category-group">
+                  <span class="group-label">应用场景</span>
+                  <div class="category-chips">
+                    <span 
+                      v-for="cat in sceneCategories" 
+                      :key="cat.id"
+                      class="chip"
+                      :class="{ active: form.categoryIds.includes(cat.id) }"
+                      @click="toggleCategory(cat.id)"
+                    >
+                      {{ cat.name }}
+                    </span>
+                  </div>
                 </div>
               </div>
-              <div class="cover-type-info">
-                <span class="cover-type-name">{{ type.name }}</span>
-                <span class="cover-type-tip">{{ type.tip }}</span>
-              </div>
-              <div class="check-icon" v-if="form.coverType === type.code">
-                <el-icon><Check /></el-icon>
-              </div>
-            </div>
+            </el-form-item>
           </div>
-        </el-form-item>
-        
-        <el-form-item label="作品内容">
-          <el-input 
-            v-model="form.content" 
-            type="textarea" 
-            :rows="6"
-            placeholder="描述你的手账作品内容..."
-          />
-        </el-form-item>
-        
-        <el-form-item label="分类标签">
-          <div class="category-section">
-            <div class="category-group">
-              <span class="group-label">排版风格</span>
-              <div class="category-chips">
-                <span 
-                  v-for="cat in styleCategories" 
-                  :key="cat.id"
-                  class="chip"
-                  :class="{ active: form.categoryIds.includes(cat.id) }"
-                  @click="toggleCategory(cat.id)"
-                >
-                  {{ cat.name }}
-                </span>
-              </div>
-            </div>
-            <div class="category-group">
-              <span class="group-label">应用场景</span>
-              <div class="category-chips">
-                <span 
-                  v-for="cat in sceneCategories" 
-                  :key="cat.id"
-                  class="chip"
-                  :class="{ active: form.categoryIds.includes(cat.id) }"
-                  @click="toggleCategory(cat.id)"
-                >
-                  {{ cat.name }}
-                </span>
-              </div>
-            </div>
-          </div>
-        </el-form-item>
+        </section>
 
-        <el-form-item label="版式网格">
-          <div class="layout-config-section">
-            <div class="layout-config-preview">
-              <LayoutGridPreviewer :layout-config="currentLayoutConfig" />
+        <section class="form-section">
+          <div class="section-header">
+            <div class="section-icon icon-layout">
+              <el-icon><Grid /></el-icon>
             </div>
-            <div class="layout-config-tip" v-if="form.categoryIds.length > 0">
-              <el-icon class="tip-icon"><InfoFilled /></el-icon>
-              <span>已根据您选择的「{{ selectedCategoryNames }}」自动匹配版式</span>
-            </div>
-            <div class="layout-config-tip warning" v-else>
-              <el-icon class="tip-icon"><Warning /></el-icon>
-              <span>请先选择排版风格或应用场景，系统将自动匹配对应的版式网格</span>
+            <div class="section-title-wrap">
+              <h2 class="section-title">版式</h2>
+              <p class="section-desc">规划页面的排版布局，定义你的手账结构</p>
             </div>
           </div>
-        </el-form-item>
-        
-        <el-form-item label="排版思路">
-          <el-input 
-            v-model="form.layoutIdea" 
-            type="textarea" 
-            :rows="3"
-            placeholder="分享你的排版设计思路..."
-          />
-        </el-form-item>
-        
-        <el-form-item label="配色方案">
-          <div class="color-scheme-editor">
-            <div class="color-type-section">
-              <div class="color-type-header">
-                <span class="type-label">主色 <span class="type-count">({{ primaryCount }}/{{ MAX_PRIMARY }})</span></span>
-                <span class="type-desc">主色调，决定整体氛围</span>
+          <div class="section-body">
+            <el-form-item label="版式网格">
+              <div class="layout-config-section">
+                <div class="layout-config-preview">
+                  <LayoutGridPreviewer :layout-config="currentLayoutConfig" />
+                </div>
+                <div class="layout-config-tip" v-if="form.categoryIds.length > 0">
+                  <el-icon class="tip-icon"><InfoFilled /></el-icon>
+                  <span>已根据您选择的「{{ selectedCategoryNames }}」自动匹配版式</span>
+                </div>
+                <div class="layout-config-tip warning" v-else>
+                  <el-icon class="tip-icon"><Warning /></el-icon>
+                  <span>请先选择排版风格或应用场景，系统将自动匹配对应的版式网格</span>
+                </div>
               </div>
-              <div class="color-swatches">
-                <div 
-                  v-for="(swatch, index) in primarySwatches" 
-                  :key="'p-' + index"
-                  class="color-swatch-item primary"
-                >
-                  <div class="swatch-color" :style="{ background: swatch.color }">
-                    <el-color-picker 
-                      v-model="swatch.color" 
-                      size="small"
-                      :show-alpha="false"
-                    />
+            </el-form-item>
+
+            <el-form-item label="排版思路">
+              <el-input 
+                v-model="form.layoutIdea" 
+                type="textarea" 
+                :rows="3"
+                placeholder="分享你的排版设计思路..."
+              />
+            </el-form-item>
+          </div>
+        </section>
+
+        <section class="form-section">
+          <div class="section-header">
+            <div class="section-icon icon-color">
+              <el-icon><Brush /></el-icon>
+            </div>
+            <div class="section-title-wrap">
+              <h2 class="section-title">配色</h2>
+              <p class="section-desc">设定整体的色彩方案，营造手账的视觉氛围</p>
+            </div>
+          </div>
+          <div class="section-body">
+            <el-form-item label="配色方案">
+              <div class="color-scheme-editor">
+                <div class="color-type-section primary">
+                  <div class="color-type-header">
+                    <span class="type-label">主色 <span class="type-count">({{ primaryCount }}/{{ MAX_PRIMARY }})</span></span>
+                    <span class="type-desc">主色调，决定整体氛围</span>
                   </div>
-                  <div class="swatch-info">
-                    <el-input 
-                      v-model="swatch.name" 
-                      placeholder="颜色名称" 
-                      size="small"
-                    />
-                    <el-input 
-                      v-model="swatch.purpose" 
-                      placeholder="用途说明" 
-                      size="small"
-                    />
+                  <div class="color-swatches">
+                    <div 
+                      v-for="(swatch, index) in primarySwatches" 
+                      :key="'p-' + index"
+                      class="color-swatch-item primary"
+                    >
+                      <div class="swatch-color" :style="{ background: swatch.color }">
+                        <el-color-picker 
+                          v-model="swatch.color" 
+                          size="small"
+                          :show-alpha="false"
+                        />
+                      </div>
+                      <div class="swatch-info">
+                        <el-input 
+                          v-model="swatch.name" 
+                          placeholder="颜色名称" 
+                          size="small"
+                        />
+                        <el-input 
+                          v-model="swatch.purpose" 
+                          placeholder="用途说明" 
+                          size="small"
+                        />
+                      </div>
+                      <button 
+                        class="remove-swatch" 
+                        @click="removeColorSwatch(swatch, 'primary')"
+                        :disabled="primaryCount <= 1"
+                      >
+                        <el-icon><Close /></el-icon>
+                      </button>
+                    </div>
                   </div>
                   <button 
-                    class="remove-swatch" 
-                    @click="removeColorSwatch(swatch, 'primary')"
-                    :disabled="primaryCount <= 1"
+                    class="add-swatch-btn small" 
+                    @click="addColorSwatch('primary')"
+                    :disabled="primaryCount >= MAX_PRIMARY"
                   >
-                    <el-icon><Close /></el-icon>
+                    <el-icon><Plus /></el-icon>
+                    添加主色
                   </button>
                 </div>
-              </div>
-              <button 
-                class="add-swatch-btn small" 
-                @click="addColorSwatch('primary')"
-                :disabled="primaryCount >= MAX_PRIMARY"
-              >
-                <el-icon><Plus /></el-icon>
-                添加主色
-              </button>
-            </div>
 
-            <div class="color-type-section">
-              <div class="color-type-header">
-                <span class="type-label">辅助色 <span class="type-count">({{ secondaryCount }}/{{ MAX_SECONDARY }})</span></span>
-                <span class="type-desc">搭配主色，丰富层次</span>
-              </div>
-              <div class="color-swatches">
-                <div 
-                  v-for="(swatch, index) in secondarySwatches" 
-                  :key="'s-' + index"
-                  class="color-swatch-item secondary"
-                >
-                  <div class="swatch-color" :style="{ background: swatch.color }">
-                    <el-color-picker 
-                      v-model="swatch.color" 
-                      size="small"
-                      :show-alpha="false"
-                    />
+                <div class="color-type-section secondary">
+                  <div class="color-type-header">
+                    <span class="type-label">辅助色 <span class="type-count">({{ secondaryCount }}/{{ MAX_SECONDARY }})</span></span>
+                    <span class="type-desc">搭配主色，丰富层次</span>
                   </div>
-                  <div class="swatch-info">
-                    <el-input 
-                      v-model="swatch.name" 
-                      placeholder="颜色名称" 
-                      size="small"
-                    />
-                    <el-input 
-                      v-model="swatch.purpose" 
-                      placeholder="用途说明" 
-                      size="small"
-                    />
+                  <div class="color-swatches">
+                    <div 
+                      v-for="(swatch, index) in secondarySwatches" 
+                      :key="'s-' + index"
+                      class="color-swatch-item secondary"
+                    >
+                      <div class="swatch-color" :style="{ background: swatch.color }">
+                        <el-color-picker 
+                          v-model="swatch.color" 
+                          size="small"
+                          :show-alpha="false"
+                        />
+                      </div>
+                      <div class="swatch-info">
+                        <el-input 
+                          v-model="swatch.name" 
+                          placeholder="颜色名称" 
+                          size="small"
+                        />
+                        <el-input 
+                          v-model="swatch.purpose" 
+                          placeholder="用途说明" 
+                          size="small"
+                        />
+                      </div>
+                      <button 
+                        class="remove-swatch" 
+                        @click="removeColorSwatch(swatch, 'secondary')"
+                        :disabled="secondaryCount <= 1"
+                      >
+                        <el-icon><Close /></el-icon>
+                      </button>
+                    </div>
                   </div>
                   <button 
-                    class="remove-swatch" 
-                    @click="removeColorSwatch(swatch, 'secondary')"
-                    :disabled="secondaryCount <= 1"
+                    class="add-swatch-btn small" 
+                    @click="addColorSwatch('secondary')"
+                    :disabled="secondaryCount >= MAX_SECONDARY"
                   >
-                    <el-icon><Close /></el-icon>
+                    <el-icon><Plus /></el-icon>
+                    添加辅助色
                   </button>
                 </div>
-              </div>
-              <button 
-                class="add-swatch-btn small" 
-                @click="addColorSwatch('secondary')"
-                :disabled="secondaryCount >= MAX_SECONDARY"
-              >
-                <el-icon><Plus /></el-icon>
-                添加辅助色
-              </button>
-            </div>
 
-            <div class="color-type-section">
-              <div class="color-type-header">
-                <span class="type-label">点缀色 <span class="type-count">({{ accentCount }}/{{ MAX_ACCENT }})</span></span>
-                <span class="type-desc">小面积使用，突出重点</span>
-              </div>
-              <div class="color-swatches">
-                <div 
-                  v-for="(swatch, index) in accentSwatches" 
-                  :key="'a-' + index"
-                  class="color-swatch-item accent"
-                >
-                  <div class="swatch-color" :style="{ background: swatch.color }">
-                    <el-color-picker 
-                      v-model="swatch.color" 
-                      size="small"
-                      :show-alpha="false"
-                    />
+                <div class="color-type-section accent">
+                  <div class="color-type-header">
+                    <span class="type-label">点缀色 <span class="type-count">({{ accentCount }}/{{ MAX_ACCENT }})</span></span>
+                    <span class="type-desc">小面积使用，突出重点</span>
                   </div>
-                  <div class="swatch-info">
-                    <el-input 
-                      v-model="swatch.name" 
-                      placeholder="颜色名称" 
-                      size="small"
-                    />
-                    <el-input 
-                      v-model="swatch.purpose" 
-                      placeholder="用途说明" 
-                      size="small"
-                    />
+                  <div class="color-swatches">
+                    <div 
+                      v-for="(swatch, index) in accentSwatches" 
+                      :key="'a-' + index"
+                      class="color-swatch-item accent"
+                    >
+                      <div class="swatch-color" :style="{ background: swatch.color }">
+                        <el-color-picker 
+                          v-model="swatch.color" 
+                          size="small"
+                          :show-alpha="false"
+                        />
+                      </div>
+                      <div class="swatch-info">
+                        <el-input 
+                          v-model="swatch.name" 
+                          placeholder="颜色名称" 
+                          size="small"
+                        />
+                        <el-input 
+                          v-model="swatch.purpose" 
+                          placeholder="用途说明" 
+                          size="small"
+                        />
+                      </div>
+                      <button 
+                        class="remove-swatch" 
+                        @click="removeColorSwatch(swatch, 'accent')"
+                        :disabled="accentCount <= 0"
+                      >
+                        <el-icon><Close /></el-icon>
+                      </button>
+                    </div>
                   </div>
                   <button 
-                    class="remove-swatch" 
-                    @click="removeColorSwatch(swatch, 'accent')"
-                    :disabled="accentCount <= 0"
+                    class="add-swatch-btn small" 
+                    @click="addColorSwatch('accent')"
+                    :disabled="accentCount >= MAX_ACCENT"
                   >
-                    <el-icon><Close /></el-icon>
+                    <el-icon><Plus /></el-icon>
+                    添加点缀色
                   </button>
                 </div>
-              </div>
-              <button 
-                class="add-swatch-btn small" 
-                @click="addColorSwatch('accent')"
-                :disabled="accentCount >= MAX_ACCENT"
-              >
-                <el-icon><Plus /></el-icon>
-                添加点缀色
-              </button>
-            </div>
 
-            <div class="color-scheme-tip" v-if="colorSchemeError">
-              <el-icon class="tip-icon"><Warning /></el-icon>
-              <span>{{ colorSchemeError }}</span>
+                <div class="color-scheme-tip" v-if="colorSchemeError">
+                  <el-icon class="tip-icon"><Warning /></el-icon>
+                  <span>{{ colorSchemeError }}</span>
+                </div>
+              </div>
+            </el-form-item>
+          </div>
+        </section>
+
+        <section class="form-section">
+          <div class="section-header">
+            <div class="section-icon icon-inspiration">
+              <el-icon><MagicStick /></el-icon>
+            </div>
+            <div class="section-title-wrap">
+              <h2 class="section-title">灵感说明</h2>
+              <p class="section-desc">记录你的创作灵感，分享背后的故事</p>
             </div>
           </div>
-        </el-form-item>
-        
-        <el-form-item label="创作灵感">
-          <el-input 
-            v-model="form.inspiration" 
-            type="textarea" 
-            :rows="3"
-            placeholder="分享你的创作灵感来源..."
-          />
-        </el-form-item>
-        
-        <el-form-item>
+          <div class="section-body">
+            <el-form-item label="创作灵感">
+              <el-input 
+                v-model="form.inspiration" 
+                type="textarea" 
+                :rows="4"
+                placeholder="分享你的创作灵感来源..."
+              />
+            </el-form-item>
+          </div>
+        </section>
+
+        <section class="form-section">
+          <div class="section-header">
+            <div class="section-icon icon-cover">
+              <el-icon><Picture /></el-icon>
+            </div>
+            <div class="section-title-wrap">
+              <h2 class="section-title">封面图</h2>
+              <p class="section-desc">上传作品封面，选择合适的画面比例</p>
+            </div>
+          </div>
+          <div class="section-body">
+            <el-form-item label="封面图片" prop="coverImage">
+              <div class="cover-upload-section">
+                <div 
+                  class="image-upload"
+                  :style="{ aspectRatio: selectedCoverAspectRatio }"
+                >
+                  <div v-if="form.coverImage" class="image-preview">
+                    <img :src="form.coverImage" alt="" />
+                    <button class="remove-btn" @click="form.coverImage = ''">
+                      <el-icon><Close /></el-icon>
+                    </button>
+                  </div>
+                  <div v-else class="upload-placeholder" @click="uploadImage">
+                    <el-icon><Plus /></el-icon>
+                    <span>上传封面图片</span>
+                  </div>
+                </div>
+              </div>
+            </el-form-item>
+
+            <el-form-item label="封面比例">
+              <div class="cover-type-selector">
+                <div 
+                  v-for="type in coverTypeList" 
+                  :key="type.code"
+                  class="cover-type-option"
+                  :class="{ active: form.coverType === type.code }"
+                  @click="selectCoverType(type.code)"
+                >
+                  <div class="cover-type-preview" :style="{ aspectRatio: `${type.widthRatio} / ${type.heightRatio}` }">
+                    <div class="preview-inner">
+                      <span class="ratio-text">{{ type.widthRatio }}:{{ type.heightRatio }}</span>
+                    </div>
+                  </div>
+                  <div class="cover-type-info">
+                    <span class="cover-type-name">{{ type.name }}</span>
+                    <span class="cover-type-tip">{{ type.tip }}</span>
+                  </div>
+                  <div class="check-icon" v-if="form.coverType === type.code">
+                    <el-icon><Check /></el-icon>
+                  </div>
+                </div>
+              </div>
+            </el-form-item>
+          </div>
+        </section>
+
+        <div class="form-actions">
           <el-button type="primary" size="large" @click="handleSubmit" :loading="submitting">
             发布作品
           </el-button>
           <el-button size="large" @click="goBack">取消</el-button>
-        </el-form-item>
+        </div>
       </el-form>
     </main>
   </div>
@@ -302,7 +368,7 @@
 import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Plus, Close, Check, Warning, InfoFilled } from '@element-plus/icons-vue'
+import { Plus, Close, Check, Warning, InfoFilled, Document, Grid, Brush, MagicStick, Picture } from '@element-plus/icons-vue'
 import Header from '@/components/Header.vue'
 import LayoutGridPreviewer from '@/components/LayoutGridPreviewer.vue'
 import { publishWork } from '@/api/work'
@@ -565,7 +631,7 @@ onMounted(() => {
 
 <style scoped>
 .publish-content {
-  max-width: 800px;
+  max-width: 900px;
   padding: 30px 20px 60px;
 }
 
@@ -578,10 +644,90 @@ onMounted(() => {
 }
 
 .publish-form {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+}
+
+.form-section {
   background: #fff;
-  padding: 40px;
+  border-radius: 16px;
+  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.06);
+  overflow: hidden;
+}
+
+.section-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  padding: 24px 32px;
+  background: linear-gradient(135deg, #fafafa 0%, #f5f5f5 100%);
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.section-icon {
+  width: 44px;
+  height: 44px;
   border-radius: 12px;
-  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  color: #fff;
+  flex-shrink: 0;
+}
+
+.section-icon .el-icon {
+  font-size: 22px;
+}
+
+.icon-basic {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.icon-layout {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.icon-color {
+  background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+}
+
+.icon-inspiration {
+  background: linear-gradient(135deg, #fa709a 0%, #fee140 100%);
+}
+
+.icon-cover {
+  background: linear-gradient(135deg, #30cfd0 0%, #330867 100%);
+}
+
+.section-title-wrap {
+  flex: 1;
+}
+
+.section-title {
+  font-size: 18px;
+  font-weight: 700;
+  color: #222;
+  margin: 0 0 4px 0;
+}
+
+.section-desc {
+  font-size: 13px;
+  color: #888;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.section-body {
+  padding: 28px 32px 12px;
+}
+
+.form-actions {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  padding: 12px 0 8px;
 }
 
 .cover-upload-section {
@@ -982,6 +1128,28 @@ onMounted(() => {
 }
 
 @media (max-width: 600px) {
+  .section-header {
+    padding: 20px 20px;
+    gap: 12px;
+  }
+
+  .section-body {
+    padding: 20px 20px 8px;
+  }
+
+  .section-icon {
+    width: 38px;
+    height: 38px;
+  }
+
+  .section-icon .el-icon {
+    font-size: 18px;
+  }
+
+  .section-title {
+    font-size: 16px;
+  }
+
   .color-swatch-item {
     flex-wrap: wrap;
   }
@@ -994,6 +1162,10 @@ onMounted(() => {
     flex-direction: column;
     align-items: flex-start;
     gap: 4px;
+  }
+
+  .publish-content {
+    padding: 20px 12px 40px;
   }
 }
 </style>
