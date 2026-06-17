@@ -56,11 +56,20 @@ img {
 }
 
 .tag {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
   padding: 4px 12px;
   border-radius: 16px;
   font-size: 12px;
   margin-right: 8px;
+  transition: all 0.3s;
+  border: 1px solid transparent;
+}
+
+.tag .tag-icon {
+  font-size: 13px;
+  line-height: 1;
 }
 
 .tag-style {
@@ -71,4 +80,48 @@ img {
 .tag-scene {
   background: #f0f9ff;
   color: #4a9eff;
+}
+
+.style-tag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 12px;
+  border-radius: 16px;
+  font-size: 12px;
+  transition: all 0.3s;
+  border: 1px solid transparent;
+  font-weight: 500;
+}
+
+.style-tag .tag-icon {
+  font-size: 13px;
+  line-height: 1;
+}
+
+.style-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 16px;
+  border: 1px solid #e8e8e8;
+  border-radius: 20px;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.3s;
+  background: #fff;
+}
+
+.style-chip:hover {
+  transform: translateY(-1px);
+}
+
+.style-chip.active {
+  border-color: transparent;
+  font-weight: 500;
+}
+
+.style-chip .chip-icon {
+  font-size: 15px;
+  line-height: 1;
 }

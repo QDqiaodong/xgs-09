@@ -45,9 +45,10 @@
             <span 
               v-for="cat in work.categories" 
               :key="cat.id"
-              class="tag"
-              :class="cat.type === 'style' ? 'tag-style' : 'tag-scene'"
+              class="style-tag"
+              :style="cat.type === 'style' ? getStyleTagStyle(cat.name) : getSceneTagStyle()"
             >
+              <span v-if="cat.type === 'style'" class="tag-icon">{{ getStyleConfig(cat.name).icon }}</span>
               {{ cat.name }}
             </span>
             <span class="tag tag-cover-type" v-if="coverTypeInfo">
@@ -212,6 +213,7 @@ import { getWorkDetail } from '@/api/work'
 import { toggleFavorite } from '@/api/favorite'
 import { getDefaultLayout } from '@/constants/layoutTemplates'
 import { getCoverTypeByCode } from '@/constants/coverTypes'
+import { getStyleConfig } from '@/constants/styleTagConfig'
 
 const route = useRoute()
 const router = useRouter()
@@ -223,6 +225,21 @@ const errorTitle = ref('')
 const errorSubtitle = ref('')
 const isNotFoundError = ref(false)
 const defaultImage = 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&h=500&fit=crop'
+
+const getStyleTagStyle = (name) => {
+  const config = getStyleConfig(name)
+  return {
+    background: config.bg,
+    color: config.color,
+    borderColor: config.borderColor,
+  }
+}
+
+const getSceneTagStyle = () => ({
+  background: '#f0f9ff',
+  color: '#4a9eff',
+  borderColor: '#b3d9ff',
+})
 
 const coverTypeInfo = computed(() => {
   if (!work.value) return null

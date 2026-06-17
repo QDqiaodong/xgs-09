@@ -1,0 +1,121 @@
+export const STYLE_TAG_CONFIG = {
+  '复古风': {
+    key: 'retro',
+    icon: '🏛',
+    bg: '#fdf6ec',
+    gradient: 'linear-gradient(135deg, #f5e6d3 0%, #e8d5b7 100%)',
+    color: '#8b6914',
+    borderColor: '#d4a843',
+    activeGradient: 'linear-gradient(135deg, #c9953c 0%, #a0722a 100%)',
+    activeColor: '#fff',
+    hoverBg: '#f5e6d3',
+    hoverColor: '#8b6914',
+  },
+  '简约风': {
+    key: 'minimal',
+    icon: '✦',
+    bg: '#f5f5f5',
+    gradient: 'linear-gradient(135deg, #e8e8e8 0%, #d9d9d9 100%)',
+    color: '#333333',
+    borderColor: '#c0c0c0',
+    activeGradient: 'linear-gradient(135deg, #555555 0%, #333333 100%)',
+    activeColor: '#fff',
+    hoverBg: '#e8e8e8',
+    hoverColor: '#333333',
+  },
+  '可爱风': {
+    key: 'cute',
+    icon: '🎀',
+    bg: '#fff0f5',
+    gradient: 'linear-gradient(135deg, #ffc1cc 0%, #ffdde1 100%)',
+    color: '#e8567f',
+    borderColor: '#f7a8bd',
+    activeGradient: 'linear-gradient(135deg, #ff6b9d 0%, #e8567f 100%)',
+    activeColor: '#fff',
+    hoverBg: '#ffe0e8',
+    hoverColor: '#e8567f',
+  },
+  '盐系': {
+    key: 'salt',
+    icon: '🌊',
+    bg: '#edf6f9',
+    gradient: 'linear-gradient(135deg, #c9e4e8 0%, #a8d5db 100%)',
+    color: '#3d8a99',
+    borderColor: '#7cc0cb',
+    activeGradient: 'linear-gradient(135deg, #3d8a99 0%, #2d6e7a 100%)',
+    activeColor: '#fff',
+    hoverBg: '#d5eef2',
+    hoverColor: '#3d8a99',
+  },
+  '暗黑系': {
+    key: 'dark',
+    icon: '🌙',
+    bg: '#f0eef5',
+    gradient: 'linear-gradient(135deg, #9b8ec4 0%, #7b6ba8 100%)',
+    color: '#4a3a7a',
+    borderColor: '#8b7ab8',
+    activeGradient: 'linear-gradient(135deg, #5b4a8a 0%, #3a2a6a 100%)',
+    activeColor: '#fff',
+    hoverBg: '#e0ddf0',
+    hoverColor: '#4a3a7a',
+  },
+  '森系': {
+    key: 'forest',
+    icon: '🌿',
+    bg: '#f0f7f0',
+    gradient: 'linear-gradient(135deg, #b5d8b5 0%, #8fc08f 100%)',
+    color: '#3a6b3a',
+    borderColor: '#7ab87a',
+    activeGradient: 'linear-gradient(135deg, #4a8a4a 0%, #2d6b2d 100%)',
+    activeColor: '#fff',
+    hoverBg: '#dff0df',
+    hoverColor: '#3a6b3a',
+  },
+  '少女风': {
+    key: 'girly',
+    icon: '🌸',
+    bg: '#fdf0f7',
+    gradient: 'linear-gradient(135deg, #f8b4d0 0%, #f09ec0 100%)',
+    color: '#c44e85',
+    borderColor: '#e88ab4',
+    activeGradient: 'linear-gradient(135deg, #d45a9a 0%, #b83d7e 100%)',
+    activeColor: '#fff',
+    hoverBg: '#fce0ef',
+    hoverColor: '#c44e85',
+  },
+  '和风': {
+    key: 'japanese',
+    icon: '⛩',
+    bg: '#fef5f0',
+    gradient: 'linear-gradient(135deg, #e8b4a0 0%, #d4947e 100%)',
+    color: '#a04030',
+    borderColor: '#c87860',
+    activeGradient: 'linear-gradient(135deg, #b84a38 0%, #8a2e20 100%)',
+    activeColor: '#fff',
+    hoverBg: '#f8e0d5',
+    hoverColor: '#a04030',
+  },
+}
+
+const DEFAULT_STYLE_CONFIG = {
+  key: 'default',
+  icon: '✨',
+  bg: '#fff0f5',
+  gradient: 'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)',
+  color: '#ff6b9d',
+  borderColor: '#f7a8bd',
+  activeGradient: 'linear-gradient(135deg, #ff6b9d 0%, #e8567f 100%)',
+  activeColor: '#fff',
+  hoverBg: '#ffe0e8',
+  hoverColor: '#ff6b9d',
+}
+
+export function getStyleConfig(name) {
+  if (!name) return DEFAULT_STYLE_CONFIG
+  return STYLE_TAG_CONFIG[name] || DEFAULT_STYLE_CONFIG
+}
+
+export function getStyleClass(name) {
+  const config = getStyleConfig(name)
+  return `style-tag--${config.key}`
+}

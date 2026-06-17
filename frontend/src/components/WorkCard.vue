@@ -36,9 +36,10 @@
         <span 
           v-for="cat in (work.categories || []).slice(0, 3)" 
           :key="cat.id"
-          class="tag"
-          :class="cat.type === 'style' ? 'tag-style' : 'tag-scene'"
+          class="style-tag"
+          :style="cat.type === 'style' ? getStyleTagStyle(cat.name) : getSceneTagStyle()"
         >
+          <span v-if="cat.type === 'style'" class="tag-icon">{{ getStyleConfig(cat.name).icon }}</span>
           {{ cat.name }}
         </span>
         <span 
@@ -64,6 +65,7 @@ import { ref, computed } from 'vue'
 import { View, Star } from '@element-plus/icons-vue'
 import { useRouter } from 'vue-router'
 import { getCoverTypeByCode } from '@/constants/coverTypes'
+import { getStyleConfig } from '@/constants/styleTagConfig'
 
 const props = defineProps({
   work: {
@@ -75,6 +77,21 @@ const props = defineProps({
 const router = useRouter()
 const defaultImage = 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=400&h=300&fit=crop'
 const imageLoading = ref(true)
+
+const getStyleTagStyle = (name) => {
+  const config = getStyleConfig(name)
+  return {
+    background: config.bg,
+    color: config.color,
+    borderColor: config.borderColor,
+  }
+}
+
+const getSceneTagStyle = () => ({
+  background: '#f0f9ff',
+  color: '#4a9eff',
+  borderColor: '#b3d9ff',
+})
 
 const coverTypeInfo = computed(() => {
   return getCoverTypeByCode(props.work.coverType)
@@ -241,7 +258,8 @@ const formatDate = (date) => {
   gap: 6px;
 }
 
-.card-tags .tag {
+.card-tags .tag,
+.card-tags .style-tag {
   margin-right: 0;
   margin-bottom: 0;
   line-height: 1.4;

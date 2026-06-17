@@ -45,10 +45,12 @@
         <span 
           v-for="cat in styleCategories" 
           :key="cat.id"
-          class="category-chip"
+          class="style-chip"
           :class="{ active: selectedCategory === cat.id }"
+          :style="getChipStyle(cat.name, selectedCategory === cat.id)"
           @click="selectCategory(cat.id)"
         >
+          <span class="chip-icon">{{ getStyleConfig(cat.name).icon }}</span>
           {{ cat.name }}
         </span>
       </div>
@@ -82,6 +84,7 @@ import Header from '@/components/Header.vue'
 import WorkCard from '@/components/WorkCard.vue'
 import { getLatestWorks, getHotWorks, getWorkList } from '@/api/work'
 import { getCategoryList } from '@/api/category'
+import { getStyleConfig } from '@/constants/styleTagConfig'
 
 const router = useRouter()
 const activeTab = ref('latest')
@@ -94,6 +97,22 @@ const pageNum = ref(1)
 const pageSize = ref(12)
 const hasMore = ref(true)
 const styleCategories = ref([])
+
+const getChipStyle = (name, isActive) => {
+  const config = getStyleConfig(name)
+  if (isActive) {
+    return {
+      background: config.activeGradient,
+      color: config.activeColor,
+      borderColor: 'transparent',
+    }
+  }
+  return {
+    background: config.bg,
+    color: config.color,
+    borderColor: config.borderColor,
+  }
+}
 
 const loadCategories = async () => {
   const res = await getCategoryList('style')
@@ -232,26 +251,12 @@ onMounted(() => {
   margin-bottom: 24px;
 }
 
-.category-chip {
-  padding: 8px 20px;
-  background: #fff;
-  border: 1px solid #e8e8e8;
-  border-radius: 20px;
+.category-bar .style-chip {
   font-size: 14px;
-  color: #666;
-  cursor: pointer;
-  transition: all 0.3s;
 }
 
-.category-chip:hover {
-  border-color: #ff9a9e;
-  color: #ff6b9d;
-}
-
-.category-chip.active {
-  background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
-  border-color: transparent;
-  color: #fff;
+.category-bar .style-chip:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .works-grid {

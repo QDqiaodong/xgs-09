@@ -10,8 +10,9 @@
           <span class="filter-label">排版风格</span>
           <div class="filter-options">
             <span 
-              class="option"
+              class="style-chip"
               :class="{ active: !selectedStyle }"
+              :style="!selectedStyle ? { background: 'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)', color: '#fff', borderColor: 'transparent' } : {}"
               @click="selectedStyle = null"
             >
               全部
@@ -19,10 +20,12 @@
             <span 
               v-for="cat in styleCategories" 
               :key="cat.id"
-              class="option"
+              class="style-chip"
               :class="{ active: selectedStyle === cat.id }"
+              :style="getChipStyle(cat.name, selectedStyle === cat.id)"
               @click="selectedStyle = cat.id"
             >
+              <span class="chip-icon">{{ getStyleConfig(cat.name).icon }}</span>
               {{ cat.name }}
             </span>
           </div>
@@ -32,8 +35,9 @@
           <span class="filter-label">应用场景</span>
           <div class="filter-options">
             <span 
-              class="option"
+              class="style-chip"
               :class="{ active: !selectedScene }"
+              :style="!selectedScene ? { background: 'linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%)', color: '#fff', borderColor: 'transparent' } : {}"
               @click="selectedScene = null"
             >
               全部
@@ -41,8 +45,9 @@
             <span 
               v-for="cat in sceneCategories" 
               :key="cat.id"
-              class="option"
+              class="style-chip"
               :class="{ active: selectedScene === cat.id }"
+              :style="selectedScene === cat.id ? { background: '#4a9eff', color: '#fff', borderColor: 'transparent' } : {}"
               @click="selectedScene = cat.id"
             >
               {{ cat.name }}
@@ -100,6 +105,7 @@ import Header from '@/components/Header.vue'
 import WorkCard from '@/components/WorkCard.vue'
 import { getWorkList } from '@/api/work'
 import { getCategoryList } from '@/api/category'
+import { getStyleConfig } from '@/constants/styleTagConfig'
 
 const route = useRoute()
 const styleCategories = ref([])
@@ -113,6 +119,22 @@ const loadingMore = ref(false)
 const pageNum = ref(1)
 const pageSize = ref(12)
 const hasMore = ref(true)
+
+const getChipStyle = (name, isActive) => {
+  const config = getStyleConfig(name)
+  if (isActive) {
+    return {
+      background: config.activeGradient,
+      color: config.activeColor,
+      borderColor: 'transparent',
+    }
+  }
+  return {
+    background: config.bg,
+    color: config.color,
+    borderColor: config.borderColor,
+  }
+}
 
 const loadCategories = async () => {
   const [styleRes, sceneRes] = await Promise.all([
@@ -230,25 +252,12 @@ onMounted(() => {
   gap: 10px;
 }
 
-.option {
-  padding: 6px 16px;
-  border: 1px solid #e8e8e8;
-  border-radius: 16px;
-  font-size: 13px;
-  color: #666;
-  cursor: pointer;
+.filter-options .style-chip {
   transition: all 0.3s;
 }
 
-.option:hover {
-  border-color: #ff9a9e;
-  color: #ff6b9d;
-}
-
-.option.active {
-  background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
-  border-color: transparent;
-  color: #fff;
+.filter-options .style-chip:hover {
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .works-grid {
