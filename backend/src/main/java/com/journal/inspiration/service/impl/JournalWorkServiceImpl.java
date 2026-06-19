@@ -120,12 +120,20 @@ public class JournalWorkServiceImpl extends ServiceImpl<JournalWorkMapper, Journ
         }
 
         if (StrUtil.isNotBlank(dto.getKeyword())) {
-            wrapper.like(JournalWork::getTitle, dto.getKeyword())
-                    .or().like(JournalWork::getContent, dto.getKeyword());
+            wrapper.and(w -> w.like(JournalWork::getTitle, dto.getKeyword())
+                    .or().like(JournalWork::getContent, dto.getKeyword()));
         }
 
         if (dto.getUserId() != null) {
             wrapper.eq(JournalWork::getUserId, dto.getUserId());
+        }
+
+        List<Long> filteredWorkIds = getFilteredWorkIds(dto);
+        if (filteredWorkIds != null) {
+            if (filteredWorkIds.isEmpty()) {
+                return new Page<>(dto.getPageNum(), dto.getPageSize(), 0);
+            }
+            wrapper.in(JournalWork::getId, filteredWorkIds);
         }
 
         wrapper.orderByDesc(JournalWork::getCreateTime);
@@ -135,6 +143,60 @@ public class JournalWorkServiceImpl extends ServiceImpl<JournalWorkMapper, Journ
         voPage.setRecords(page.getRecords().stream().map(this::convertToVO).collect(Collectors.toList()));
 
         return voPage;
+    }
+
+    private List<Long> getFilteredWorkIds(WorkQueryDTO dto) {
+        List<Long> categoryIds = new java.util.ArrayList<>();
+
+        if (dto.getCategoryId() != null) {
+            categoryIds.add(dto.getCategoryId());
+        }
+        if (dto.getStyleCategoryId() != null) {
+            categoryIds.add(dto.getStyleCategoryId());
+        }
+        if (dto.getSceneCategoryId() != null) {
+            categoryIds.add(dto.getSceneCategoryId());
+        }
+
+        if (categoryIds.isEmpty() && dto.getCategoryType() == null) {
+            return null;
+        }
+
+        if (!categoryIds.isEmpty()) {
+            List<Long> workIds = workCategoryMapper.selectList(
+                    new LambdaQueryWrapper<WorkCategory>().in(WorkCategory::getCategoryId, categoryIds)
+            ).stream().map(WorkCategory::getWorkId).distinct().collect(Collectors.toList());
+
+            if (dto.getCategoryType() != null) {
+                List<Long> typeCategoryIds = categoryMapper.selectList(
+                        new LambdaQueryWrapper<Category>().eq(Category::getType, dto.getCategoryType())
+                ).stream().map(Category::getId).collect(Collectors.toList());
+
+                if (!typeCategoryIds.isEmpty()) {
+                    List<Long> typeWorkIds = workCategoryMapper.selectList(
+                            new LambdaQueryWrapper<WorkCategory>().in(WorkCategory::getCategoryId, typeCategoryIds)
+                    ).stream().map(WorkCategory::getWorkId).distinct().collect(Collectors.toList());
+                    workIds.retainAll(typeWorkIds);
+                }
+            }
+            return workIds;
+        }
+
+        if (dto.getCategoryType() != null) {
+            List<Long> typeCategoryIds = categoryMapper.selectList(
+                    new LambdaQueryWrapper<Category>().eq(Category::getType, dto.getCategoryType())
+            ).stream().map(Category::getId).collect(Collectors.toList());
+
+            if (typeCategoryIds.isEmpty()) {
+                return new java.util.ArrayList<>();
+            }
+
+            return workCategoryMapper.selectList(
+                    new LambdaQueryWrapper<WorkCategory>().in(WorkCategory::getCategoryId, typeCategoryIds)
+            ).stream().map(WorkCategory::getWorkId).distinct().collect(Collectors.toList());
+        }
+
+        return null;
     }
 
     @Override
@@ -335,7 +397,63 @@ public class JournalWorkServiceImpl extends ServiceImpl<JournalWorkMapper, Journ
             vo.setCategories(categoryVOS);
         }
 
+        if (StrUtil.isNotBlank(work.getColorScheme())) {
+            vo.setColorScheme(enrichColorSchemeWithType(work.getColorScheme()));
+        }
+
         vo.setIsFavorite(false);
         return vo;
+    }
+
+    private String enrichColorSchemeWithType(String colorSchemeJson) {
+        try {
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            java.util.List<java.util.Map<String, Object>> swatches = mapper.readValue(
+                    colorSchemeJson,
+                    new com.fasterxml.jackson.core.type.TypeReference<java.util.List<java.util.Map<String, Object>>>() {}
+            );
+
+            if (swatches == null || swatches.isEmpty()) {
+                return colorSchemeJson;
+            }
+
+            boolean hasType = swatches.stream().anyMatch(s -> s.get("type") != null);
+            if (hasType) {
+                return colorSchemeJson;
+            }
+
+            for (java.util.Map<String, Object> swatch : swatches) {
+                Object purposeObj = swatch.get("purpose");
+                Object nameObj = swatch.get("name");
+                String purpose = purposeObj instanceof String ? (String) purposeObj : "";
+                String name = nameObj instanceof String ? (String) nameObj : "";
+                String combined = (purpose + " " + name).toLowerCase();
+
+                String inferredType = inferColorType(combined);
+                if (inferredType != null) {
+                    swatch.put("type", inferredType);
+                }
+            }
+
+            return mapper.writeValueAsString(swatches);
+        } catch (Exception e) {
+            return colorSchemeJson;
+        }
+    }
+
+    private String inferColorType(String text) {
+        if (text.contains("主色") || text.contains("主色调") || text.contains("primary")) {
+            return ColorSchemeValidator.TYPE_PRIMARY;
+        }
+        if (text.contains("辅助色") || text.contains("次要") || text.contains("secondary")) {
+            return ColorSchemeValidator.TYPE_SECONDARY;
+        }
+        if (text.contains("点缀色") || text.contains("强调色") || text.contains("亮点") || text.contains("accent")) {
+            return ColorSchemeValidator.TYPE_ACCENT;
+        }
+        if (text.contains("背景")) {
+            return ColorSchemeValidator.TYPE_SECONDARY;
+        }
+        return null;
     }
 }
