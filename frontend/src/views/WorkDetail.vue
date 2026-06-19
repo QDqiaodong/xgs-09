@@ -117,6 +117,57 @@
             />
             <div v-if="!hasValidSwatches" class="section-content">{{ work.colorScheme }}</div>
           </div>
+
+          <div class="elements-section" v-if="work.elementGroups && work.elementGroups.length > 0">
+            <div class="section-header">
+              <el-icon class="section-icon"><Collection /></el-icon>
+              <h3 class="section-title">页面元素清单</h3>
+              <div class="elements-summary">
+                共 {{ totalElementCount }} 个元素
+              </div>
+            </div>
+            <div class="element-groups">
+              <div
+                v-for="group in work.elementGroups"
+                :key="group.category"
+                class="element-group-card"
+                :style="{ '--group-color': getElementCategoryColor(group.category), '--group-border': getElementCategoryBorder(group.category) }"
+              >
+                <div class="group-header">
+                  <div class="group-icon-wrap">
+                    <span class="group-icon">{{ group.categoryIcon }}</span>
+                  </div>
+                  <div class="group-info">
+                    <h4 class="group-name">{{ group.categoryDesc }}</h4>
+                    <span class="group-count">{{ group.elements.length }} 项 · 共 {{ group.totalCount }} 个</span>
+                  </div>
+                </div>
+                <div class="group-elements">
+                  <div
+                    v-for="el in group.elements"
+                    :key="el.id"
+                    class="group-element-item"
+                  >
+                    <div class="element-thumb" v-if="el.imageUrl">
+                      <img :src="el.imageUrl" :alt="el.name" @error="handleElementImageError" />
+                    </div>
+                    <div class="element-thumb placeholder" v-else>
+                      <span>{{ group.categoryIcon }}</span>
+                    </div>
+                    <div class="element-info">
+                      <div class="element-name-row">
+                        <span class="element-name">{{ el.name }}</span>
+                        <span v-if="el.quantity > 1" class="element-quantity" :style="{ background: getElementCategoryColor(group.category) }">
+                          ×{{ el.quantity }}
+                        </span>
+                      </div>
+                      <div v-if="el.description" class="element-desc">{{ el.description }}</div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </template>
     </main>
@@ -126,7 +177,7 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { View, Star, Share, MagicStick, Grid, Brush, Picture } from '@element-plus/icons-vue'
+import { View, Star, Share, MagicStick, Grid, Brush, Picture, Collection } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import Header from '@/components/Header.vue'
 import LayoutGridPreviewer from '@/components/LayoutGridPreviewer.vue'
@@ -136,6 +187,7 @@ import { toggleFavorite } from '@/api/favorite'
 import { getDefaultLayout } from '@/constants/layoutTemplates'
 import { getCoverTypeByCode } from '@/constants/coverTypes'
 import { getStyleConfig } from '@/constants/styleTagConfig'
+import { getElementCategoryByCode } from '@/constants/elementCategories'
 
 const route = useRoute()
 const router = useRouter()
@@ -177,6 +229,25 @@ const coverAspectRatio = computed(() => {
   if (!coverTypeInfo.value) return '3 / 2'
   return `${coverTypeInfo.value.widthRatio} / ${coverTypeInfo.value.heightRatio}`
 })
+
+const totalElementCount = computed(() => {
+  if (!work.value || !work.value.elementGroups) return 0
+  return work.value.elementGroups.reduce((sum, g) => sum + (g.totalCount || 0), 0)
+})
+
+const getElementCategoryColor = (code) => {
+  const cat = getElementCategoryByCode(code)
+  return cat ? cat.color : '#ff6b9d'
+}
+
+const getElementCategoryBorder = (code) => {
+  const cat = getElementCategoryByCode(code)
+  return cat ? cat.borderColor : '#ffb6c1'
+}
+
+const handleElementImageError = (e) => {
+  e.target.style.display = 'none'
+}
 
 const workLayoutConfig = computed(() => {
   if (!work.value) return getDefaultLayout()
@@ -528,5 +599,219 @@ watch(
   color: #555;
   font-size: 15px;
   white-space: pre-wrap;
+}
+
+.elements-section {
+  margin-bottom: 32px;
+  padding: 24px;
+  border-radius: 12px;
+  transition: all 0.3s;
+  background: linear-gradient(135deg, #fff5f8 0%, #eef2ff 100%);
+  border-left: 4px solid #f093fb;
+}
+
+.elements-section .section-icon {
+  color: #f093fb;
+}
+
+.elements-section .section-title {
+  margin-bottom: 0;
+  border-left: none;
+  padding-left: 0;
+  color: #7b2d8e;
+}
+
+.elements-summary {
+  margin-left: auto;
+  padding: 4px 12px;
+  background: #fff;
+  border-radius: 12px;
+  font-size: 13px;
+  color: #888;
+  font-weight: 500;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+}
+
+.element-groups {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.element-group-card {
+  --group-color: #ff6b9d;
+  --group-border: #ffb6c1;
+  background: #fff;
+  border-radius: 14px;
+  border: 1px solid #f0f0f0;
+  overflow: hidden;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.04);
+  transition: all 0.3s;
+}
+
+.element-group-card:hover {
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+
+.group-header {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, var(--group-color) 0%, var(--group-border) 100%);
+}
+
+.group-icon-wrap {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.25);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(4px);
+}
+
+.group-icon {
+  font-size: 24px;
+}
+
+.group-info {
+  flex: 1;
+}
+
+.group-name {
+  margin: 0 0 2px 0;
+  font-size: 16px;
+  font-weight: 700;
+  color: #fff;
+}
+
+.group-count {
+  font-size: 12px;
+  color: rgba(255, 255, 255, 0.85);
+}
+
+.group-elements {
+  padding: 12px 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.group-element-item {
+  display: flex;
+  gap: 12px;
+  padding: 10px;
+  border-radius: 10px;
+  background: #fafafa;
+  transition: all 0.3s;
+}
+
+.group-element-item:hover {
+  background: #f5f5f5;
+}
+
+.element-thumb {
+  width: 52px;
+  height: 52px;
+  border-radius: 10px;
+  overflow: hidden;
+  flex-shrink: 0;
+  border: 1px solid #eee;
+  background: #fff;
+}
+
+.element-thumb img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+.element-thumb.placeholder {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: linear-gradient(135deg, #fafafa 0%, #f0f0f0 100%);
+  font-size: 24px;
+}
+
+.element-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 4px;
+}
+
+.element-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.element-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: #333;
+}
+
+.element-quantity {
+  padding: 2px 8px;
+  border-radius: 10px;
+  color: #fff;
+  font-size: 12px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.element-desc {
+  font-size: 13px;
+  color: #888;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+@media (max-width: 600px) {
+  .elements-summary {
+    display: none;
+  }
+
+  .element-groups {
+    gap: 16px;
+  }
+
+  .group-header {
+    padding: 14px 16px;
+    gap: 12px;
+  }
+
+  .group-icon-wrap {
+    width: 40px;
+    height: 40px;
+  }
+
+  .group-icon {
+    font-size: 20px;
+  }
+
+  .group-elements {
+    padding: 10px 14px;
+  }
+
+  .element-thumb {
+    width: 44px;
+    height: 44px;
+  }
+
+  .element-thumb.placeholder {
+    font-size: 20px;
+  }
 }
 </style>

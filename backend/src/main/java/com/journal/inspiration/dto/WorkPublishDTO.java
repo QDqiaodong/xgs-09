@@ -30,4 +30,6 @@ public class WorkPublishDTO {
     private String inspiration;
 
     private List<Long> categoryIds;
+
+    private List<WorkElementDTO> elements;
 }

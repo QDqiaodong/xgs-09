@@ -297,6 +297,97 @@
 
         <section class="form-section">
           <div class="section-header">
+            <div class="section-icon icon-elements">
+              <el-icon><Collection /></el-icon>
+            </div>
+            <div class="section-title-wrap">
+              <h2 class="section-title">页面元素清单</h2>
+              <p class="section-desc">记录创作中使用的贴纸、胶带、照片、手写字和边框等元素</p>
+            </div>
+          </div>
+          <div class="section-body">
+            <el-form-item label="元素清单">
+              <div class="elements-editor">
+                <div class="element-tabs">
+                  <div
+                    v-for="cat in ELEMENT_CATEGORIES"
+                    :key="cat.code"
+                    class="element-tab"
+                    :class="{ active: activeElementTab === cat.code }"
+                    :style="{ borderColor: activeElementTab === cat.code ? cat.color : 'transparent' }"
+                    @click="activeElementTab = cat.code"
+                  >
+                    <span class="tab-icon">{{ cat.icon }}</span>
+                    <span class="tab-name">{{ cat.name }}</span>
+                    <span v-if="getElementsCountByCategory(cat.code) > 0" class="tab-badge" :style="{ background: cat.color }">
+                      {{ getElementsCountByCategory(cat.code) }}
+                    </span>
+                  </div>
+                </div>
+
+                <div class="current-tab-elements" v-for="cat in ELEMENT_CATEGORIES" :key="'list-' + cat.code" v-show="activeElementTab === cat.code">
+                  <div class="elements-list" v-if="getElementsByCategory(cat.code).length > 0">
+                    <div
+                      v-for="(el, index) in getElementsByCategory(cat.code)"
+                      :key="index"
+                      class="element-item"
+                      :style="{ borderLeftColor: cat.color }"
+                    >
+                      <div class="element-item-body">
+                        <div class="element-row">
+                          <el-input
+                            v-model="el.name"
+                            placeholder="元素名称，如：樱花贴纸"
+                            size="default"
+                          />
+                          <el-input-number
+                            v-model="el.quantity"
+                            :min="1"
+                            :max="999"
+                            size="default"
+                            controls-position="right"
+                            placeholder="数量"
+                          />
+                          <button class="remove-element-btn" @click="removeElement(cat.code, index)">
+                            <el-icon><Delete /></el-icon>
+                          </button>
+                        </div>
+                        <div class="element-row" style="margin-top: 8px;">
+                          <el-input
+                            v-model="el.description"
+                            placeholder="描述（可选），如：粉色系樱花花瓣贴纸，营造春日氛围"
+                            size="default"
+                          />
+                        </div>
+                        <div class="element-row" style="margin-top: 8px;">
+                          <el-input
+                            v-model="el.imageUrl"
+                            placeholder="元素图片URL（可选）"
+                            size="default"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="empty-elements" v-else>
+                    <el-empty :description="`还没有添加${cat.name}，点击下方按钮添加`" :image-size="60" />
+                  </div>
+                  <button
+                    class="add-element-btn"
+                    :style="{ '--accent-color': cat.color, '--accent-border': cat.borderColor }"
+                    @click="addElement(cat.code)"
+                  >
+                    <el-icon><Plus /></el-icon>
+                    添加{{ cat.name }}
+                  </button>
+                </div>
+              </div>
+            </el-form-item>
+          </div>
+        </section>
+
+        <section class="form-section">
+          <div class="section-header">
             <div class="section-icon icon-cover">
               <el-icon><Picture /></el-icon>
             </div>
@@ -368,13 +459,14 @@
 import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Plus, Close, Check, Warning, InfoFilled, Document, Grid, Brush, MagicStick, Picture } from '@element-plus/icons-vue'
+import { Plus, Close, Check, Warning, InfoFilled, Document, Grid, Brush, MagicStick, Picture, Collection, Delete } from '@element-plus/icons-vue'
 import Header from '@/components/Header.vue'
 import LayoutGridPreviewer from '@/components/LayoutGridPreviewer.vue'
 import { publishWork } from '@/api/work'
 import { getCategoryList } from '@/api/category'
 import { COVER_TYPE_LIST, DEFAULT_COVER_TYPE, getCoverTypeByCode } from '@/constants/coverTypes'
 import { getDefaultLayout } from '@/constants/layoutTemplates'
+import { ELEMENT_CATEGORIES } from '@/constants/elementCategories'
 
 const router = useRouter()
 const formRef = ref(null)
@@ -411,6 +503,9 @@ const secondaryCount = computed(() => secondarySwatches.value.length)
 const accentCount = computed(() => accentSwatches.value.length)
 const totalCount = computed(() => primaryCount.value + secondaryCount.value + accentCount.value)
 
+const activeElementTab = ref(1)
+const elements = ref([])
+
 const form = reactive({
   userId: 1,
   title: '',
@@ -421,8 +516,37 @@ const form = reactive({
   layoutConfig: '',
   colorScheme: '',
   inspiration: '',
-  categoryIds: []
+  categoryIds: [],
+  elements: []
 })
+
+const getElementsByCategory = (category) => {
+  return elements.value.filter(el => el.category === category)
+}
+
+const getElementsCountByCategory = (category) => {
+  return getElementsByCategory(category).length
+}
+
+const addElement = (category) => {
+  elements.value.push({
+    category,
+    name: '',
+    description: '',
+    imageUrl: '',
+    quantity: 1,
+    sort: elements.value.length
+  })
+}
+
+const removeElement = (category, indexInCategory) => {
+  const categoryElements = getElementsByCategory(category)
+  const targetEl = categoryElements[indexInCategory]
+  const globalIndex = elements.value.indexOf(targetEl)
+  if (globalIndex > -1) {
+    elements.value.splice(globalIndex, 1)
+  }
+}
 
 const selectedCategories = computed(() => {
   const allCategories = [...styleCategories.value, ...sceneCategories.value]
@@ -606,6 +730,8 @@ const handleSubmit = async () => {
   if (!form.layoutConfig) {
     generateLayoutConfig()
   }
+
+  form.elements = elements.value.filter(el => el.name && el.name.trim())
   
   submitting.value = true
   try {
@@ -699,6 +825,10 @@ onMounted(() => {
 
 .icon-cover {
   background: linear-gradient(135deg, #30cfd0 0%, #330867 100%);
+}
+
+.icon-elements {
+  background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
 }
 
 .section-title-wrap {
@@ -1125,6 +1255,160 @@ onMounted(() => {
 
 .layout-config-tip.warning .tip-icon {
   color: #e6a23c;
+}
+
+.elements-editor {
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.element-tabs {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.element-tab {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 16px;
+  border-radius: 20px;
+  background: #f8f9fa;
+  border: 2px solid transparent;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-size: 14px;
+  color: #666;
+}
+
+.element-tab:hover {
+  background: #fff5f8;
+  color: #333;
+}
+
+.element-tab.active {
+  background: #fff;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+  color: #333;
+  font-weight: 600;
+}
+
+.tab-icon {
+  font-size: 16px;
+}
+
+.tab-badge {
+  min-width: 20px;
+  height: 20px;
+  border-radius: 10px;
+  color: #fff;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 6px;
+  font-weight: 600;
+}
+
+.current-tab-elements {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.elements-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.element-item {
+  padding: 16px;
+  background: #fafafa;
+  border-radius: 12px;
+  border: 1px solid #eee;
+  border-left: 4px solid #ff6b9d;
+  transition: all 0.3s;
+}
+
+.element-item:hover {
+  background: #fff;
+  box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
+}
+
+.element-item-body {
+  width: 100%;
+}
+
+.element-row {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+}
+
+.element-row .el-input {
+  flex: 1;
+}
+
+.element-row .el-input-number {
+  width: 120px;
+  flex-shrink: 0;
+}
+
+.remove-element-btn {
+  width: 36px;
+  height: 36px;
+  border: none;
+  background: #ff6b6b;
+  color: #fff;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  transition: all 0.3s;
+}
+
+.remove-element-btn:hover {
+  background: #ff5252;
+  transform: scale(1.05);
+}
+
+.empty-elements {
+  padding: 20px;
+  background: #fafafa;
+  border-radius: 12px;
+  border: 1px dashed #e0e0e0;
+}
+
+.add-element-btn {
+  --accent-color: #ff6b9d;
+  --accent-border: #ffb6c1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  padding: 12px;
+  border: 2px dashed var(--accent-border);
+  border-radius: 12px;
+  background: #fff;
+  color: var(--accent-color);
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.add-element-btn:hover {
+  background: #fff5f8;
+  border-color: var(--accent-color);
+  transform: translateY(-1px);
 }
 
 @media (max-width: 600px) {

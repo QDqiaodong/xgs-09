@@ -5,10 +5,12 @@ import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.journal.inspiration.dto.WorkElementDTO;
 import com.journal.inspiration.dto.WorkPublishDTO;
 import com.journal.inspiration.dto.WorkQueryDTO;
 import com.journal.inspiration.common.ColorSchemeValidator;
 import com.journal.inspiration.common.CoverTypeEnum;
+import com.journal.inspiration.common.ElementCategoryEnum;
 import com.journal.inspiration.common.LayoutTemplateConfig;
 import com.journal.inspiration.common.WorkStatusEnum;
 import com.journal.inspiration.entity.*;
@@ -17,6 +19,8 @@ import com.journal.inspiration.service.*;
 import com.journal.inspiration.vo.CategoryStatsVO;
 import com.journal.inspiration.vo.CategoryVO;
 import com.journal.inspiration.vo.StatusStatsVO;
+import com.journal.inspiration.vo.WorkElementGroupVO;
+import com.journal.inspiration.vo.WorkElementVO;
 import com.journal.inspiration.vo.WorkStatsVO;
 import com.journal.inspiration.vo.WorkVO;
 import lombok.RequiredArgsConstructor;
@@ -25,7 +29,10 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Map;
 import java.util.stream.Collectors;
 
 @Service
@@ -36,6 +43,7 @@ public class JournalWorkServiceImpl extends ServiceImpl<JournalWorkMapper, Journ
     private final CategoryMapper categoryMapper;
     private final UserMapper userMapper;
     private final FavoriteService favoriteService;
+    private final WorkElementMapper workElementMapper;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -50,6 +58,14 @@ public class JournalWorkServiceImpl extends ServiceImpl<JournalWorkMapper, Journ
             List<Category> categories = categoryMapper.selectBatchIds(dto.getCategoryIds());
             if (categories.size() != dto.getCategoryIds().size()) {
                 throw new IllegalArgumentException("存在无效的分类编号");
+            }
+        }
+
+        if (dto.getElements() != null && !dto.getElements().isEmpty()) {
+            for (WorkElementDTO elementDTO : dto.getElements()) {
+                if (ElementCategoryEnum.getByCode(elementDTO.getCategory()) == null) {
+                    throw new IllegalArgumentException("存在无效的元素分类: " + elementDTO.getCategory());
+                }
             }
         }
 
@@ -87,6 +103,22 @@ public class JournalWorkServiceImpl extends ServiceImpl<JournalWorkMapper, Journ
                 workCategory.setWorkId(work.getId());
                 workCategory.setCategoryId(categoryId);
                 workCategoryMapper.insert(workCategory);
+            }
+        }
+
+        if (dto.getElements() != null && !dto.getElements().isEmpty()) {
+            int sort = 0;
+            for (WorkElementDTO elementDTO : dto.getElements()) {
+                WorkElement element = new WorkElement();
+                BeanUtil.copyProperties(elementDTO, element);
+                element.setWorkId(work.getId());
+                if (element.getQuantity() == null || element.getQuantity() < 1) {
+                    element.setQuantity(1);
+                }
+                if (element.getSort() == null) {
+                    element.setSort(sort++);
+                }
+                workElementMapper.insert(element);
             }
         }
 
@@ -401,8 +433,59 @@ public class JournalWorkServiceImpl extends ServiceImpl<JournalWorkMapper, Journ
             vo.setColorScheme(enrichColorSchemeWithType(work.getColorScheme()));
         }
 
+        vo.setElementGroups(getWorkElementGroups(work.getId()));
+
         vo.setIsFavorite(false);
         return vo;
+    }
+
+    private List<WorkElementGroupVO> getWorkElementGroups(Long workId) {
+        List<WorkElement> elements = workElementMapper.selectList(
+                new LambdaQueryWrapper<WorkElement>()
+                        .eq(WorkElement::getWorkId, workId)
+                        .orderByAsc(WorkElement::getCategory, WorkElement::getSort)
+        );
+
+        if (elements.isEmpty()) {
+            return new ArrayList<>();
+        }
+
+        Map<Integer, List<WorkElement>> groupMap = elements.stream()
+                .collect(Collectors.groupingBy(WorkElement::getCategory));
+
+        List<WorkElementGroupVO> groupVOList = new ArrayList<>();
+
+        for (ElementCategoryEnum categoryEnum : ElementCategoryEnum.values()) {
+            List<WorkElement> categoryElements = groupMap.get(categoryEnum.getCode());
+            if (categoryElements != null && !categoryElements.isEmpty()) {
+                WorkElementGroupVO groupVO = new WorkElementGroupVO();
+                groupVO.setCategory(categoryEnum.getCode());
+                groupVO.setCategoryDesc(categoryEnum.getDesc());
+                groupVO.setCategoryIcon(categoryEnum.getIcon());
+
+                List<WorkElementVO> elementVOList = categoryElements.stream()
+                        .sorted(Comparator.comparing(WorkElement::getSort, Comparator.nullsLast(Integer::compareTo)))
+                        .map(el -> {
+                            WorkElementVO evo = new WorkElementVO();
+                            BeanUtil.copyProperties(el, evo);
+                            evo.setCategoryDesc(categoryEnum.getDesc());
+                            evo.setCategoryIcon(categoryEnum.getIcon());
+                            return evo;
+                        })
+                        .collect(Collectors.toList());
+
+                groupVO.setElements(elementVOList);
+
+                int totalCount = elementVOList.stream()
+                        .mapToInt(evo -> evo.getQuantity() != null ? evo.getQuantity() : 0)
+                        .sum();
+                groupVO.setTotalCount(totalCount);
+
+                groupVOList.add(groupVO);
+            }
+        }
+
+        return groupVOList;
     }
 
     private String enrichColorSchemeWithType(String colorSchemeJson) {

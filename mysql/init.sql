@@ -93,6 +93,23 @@ CREATE TABLE favorite (
   INDEX idx_work_id (work_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+DROP TABLE IF EXISTS work_element;
+CREATE TABLE work_element (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  work_id BIGINT NOT NULL,
+  category TINYINT NOT NULL COMMENT '1:贴纸 2:胶带 3:照片 4:手写字 5:边框',
+  name VARCHAR(100),
+  description VARCHAR(500),
+  image_url VARCHAR(500),
+  quantity INT DEFAULT 1,
+  sort INT DEFAULT 0,
+  create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+  update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  deleted TINYINT DEFAULT 0,
+  INDEX idx_work_id (work_id),
+  INDEX idx_category (category)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 SET FOREIGN_KEY_CHECKS = 1;
 
 INSERT INTO sys_user (username, password, nickname, bio) VALUES
@@ -249,3 +266,41 @@ INSERT INTO work_category (work_id, category_id) VALUES
 (6, 2), (6, 5),
 (7, 3), (7, 9),
 (8, 2), (8, 9);
+
+INSERT INTO work_element (work_id, category, name, description, image_url, quantity, sort) VALUES
+(1, 1, '樱花贴纸', '粉色系樱花花瓣贴纸，营造春日氛围', '', 8, 1),
+(1, 1, '小蝴蝶贴纸', '透明底色蝴蝶贴纸，点缀页面角落', '', 3, 2),
+(1, 1, '文字贴纸', '「春天来了」「美好时光」等文字装饰', '', 4, 3),
+(1, 2, '粉色格纹胶带', '1.5cm宽粉色格纹和纸胶带，装饰边框', '', 1, 1),
+(1, 2, '小花边胶带', '0.5cm宽花朵蕾丝边胶带', '', 2, 2),
+(1, 3, '樱花盛开照片', '小区樱花道实景照片，3寸打印', 'https://images.unsplash.com/photo-1522383225653-ed111181a951?w=400&h=300&fit=crop', 1, 1),
+(1, 3, '下午茶照片', '樱花树下咖啡和蛋糕的合影', 'https://images.unsplash.com/photo-1495474472287-4d71bcdd2085?w=400&h=300&fit=crop', 1, 2),
+(1, 4, '赏花日记手写字', '黑色秀丽笔书写的赏花记录文字', '', 1, 1),
+(1, 4, '日期标注', '艺术字体书写的日期「3月25日」', '', 1, 2),
+(1, 5, '花朵波浪边框', '手绘粉色花朵波浪线装饰页面边缘', '', 1, 1),
+(1, 5, '照片圆角边框', '为照片添加的淡粉色圆角边框装饰', '', 2, 2),
+
+(3, 1, '生日蛋糕贴纸', '各种可爱蛋糕和甜点图案贴纸', '', 5, 1),
+(3, 1, '气球贴纸', '彩色氢气球图案，营造派对氛围', '', 6, 2),
+(3, 1, '礼物盒贴纸', '带蝴蝶结的精美礼物盒贴纸', '', 4, 3),
+(3, 1, '星星亮片贴纸', '金色星星闪光贴纸，增加梦幻感', '', 10, 4),
+(3, 2, '彩虹条纹胶带', '2cm宽七彩虹条纹胶带', '', 1, 1),
+(3, 2, '波点胶带', '粉白波点和纸胶带，装饰分割线', '', 2, 2),
+(3, 3, '生日蛋糕照片', '定制的可爱生日蛋糕实拍', 'https://images.unsplash.com/photo-1558636508-e0db3814bd1d?w=400&h=300&fit=crop', 1, 1),
+(3, 3, '派对合影', '与朋友们的生日派对大合照', 'https://images.unsplash.com/photo-1530103862676-de8c9debad1d?w=400&h=300&fit=crop', 1, 2),
+(3, 4, '生日快乐祝福语', '用多种彩色笔书写的生日祝福话语', '', 1, 1),
+(3, 4, '许愿卡手写字', '荧光笔书写的三个生日愿望', '', 1, 2),
+(3, 5, '彩带边框', '模拟彩色丝带的卷曲边框', '', 1, 1),
+(3, 5, '星星点缀边框', '页面四角的小星星装饰边框', '', 1, 2),
+
+(4, 1, '地图地标贴纸', '景点标注、指南针、小飞机等旅行贴纸', '', 7, 1),
+(4, 1, '美食贴纸', '沙茶面、土笋冻、椰子等厦门特色美食贴纸', '', 5, 2),
+(4, 2, '复古牛皮纸胶带', '1cm宽仿旧牛皮纸胶带，做旧效果', '', 2, 1),
+(4, 2, '海蓝色细胶带', '0.3cm宽海蓝色边框胶带', '', 3, 2),
+(4, 3, '鼓浪屿风景照', '日光岩和菽庄花园的风景照', 'https://images.unsplash.com/photo-1528164344705-47542687000d?w=400&h=300&fit=crop', 2, 1),
+(4, 3, '曾厝垵街景', '文艺小店和特色建筑照片', 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=400&h=300&fit=crop', 2, 2),
+(4, 3, '美食合集照', '厦门小吃拼盘照片', 'https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400&h=300&fit=crop', 1, 3),
+(4, 4, '旅行随感', '用钢笔书写的鼓浪屿旅行感想', '', 1, 1),
+(4, 4, '行程记录手账', '每一天的行程安排手写记录', '', 1, 2),
+(4, 5, '邮票仿边框', '模拟邮票齿孔的照片边框装饰', '', 3, 1),
+(4, 5, '机票式边框', '仿机票设计的文字区域边框', '', 1, 2);
