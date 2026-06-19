@@ -52,6 +52,4 @@ public class WorkVO {
     private Boolean isFavorite;
 
     private LocalDateTime createTime;
-
-    private List<WorkElementGroupVO> elementGroups;
 }

@@ -17,7 +17,4 @@ public class WorkCategory {
 
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
-
-    @TableLogic
-    private Integer deleted;
 }
