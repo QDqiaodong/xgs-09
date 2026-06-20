@@ -77,8 +77,11 @@ CREATE TABLE work_category (
   work_id BIGINT NOT NULL,
   category_id BIGINT NOT NULL,
   create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+  deleted TINYINT DEFAULT 0,
+  UNIQUE KEY uk_work_category (work_id, category_id),
   INDEX idx_work_id (work_id),
-  INDEX idx_category_id (category_id)
+  INDEX idx_category_id (category_id),
+  INDEX idx_deleted (deleted)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 DROP TABLE IF EXISTS work_element;

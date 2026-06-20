@@ -31,8 +31,10 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.ArrayList;
 import java.util.Comparator;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 @Service
@@ -54,10 +56,15 @@ public class JournalWorkServiceImpl extends ServiceImpl<JournalWorkMapper, Journ
             throw new IllegalArgumentException("用户不存在");
         }
 
-        if (dto.getCategoryIds() != null && !dto.getCategoryIds().isEmpty()) {
-            List<Category> categories = categoryMapper.selectBatchIds(dto.getCategoryIds());
-            if (categories.size() != dto.getCategoryIds().size()) {
-                throw new IllegalArgumentException("存在无效的分类编号");
+        List<Long> categoryIds = new ArrayList<>();
+        if (dto.getCategoryIds() != null) {
+            categoryIds = dto.getCategoryIds().stream().distinct().collect(Collectors.toList());
+        }
+        List<Category> categories = new ArrayList<>();
+        if (!categoryIds.isEmpty()) {
+            categories = categoryMapper.selectBatchIds(categoryIds);
+            if (categories.size() != categoryIds.size()) {
+                throw new IllegalArgumentException("存在无效或已失效的分类编号");
             }
         }
 
@@ -81,10 +88,6 @@ public class JournalWorkServiceImpl extends ServiceImpl<JournalWorkMapper, Journ
         }
 
         if (work.getLayoutConfig() == null || work.getLayoutConfig().trim().isEmpty()) {
-            List<Category> categories = new java.util.ArrayList<>();
-            if (dto.getCategoryIds() != null && !dto.getCategoryIds().isEmpty()) {
-                categories = categoryMapper.selectBatchIds(dto.getCategoryIds());
-            }
             String defaultLayoutJson = LayoutTemplateConfig.getDefaultLayoutJson(categories);
             if (defaultLayoutJson != null) {
                 work.setLayoutConfig(defaultLayoutJson);
@@ -97,13 +100,11 @@ public class JournalWorkServiceImpl extends ServiceImpl<JournalWorkMapper, Journ
         work.setStatus(WorkStatusEnum.PUBLIC.getCode());
         save(work);
 
-        if (dto.getCategoryIds() != null && !dto.getCategoryIds().isEmpty()) {
-            for (Long categoryId : dto.getCategoryIds()) {
-                WorkCategory workCategory = new WorkCategory();
-                workCategory.setWorkId(work.getId());
-                workCategory.setCategoryId(categoryId);
-                workCategoryMapper.insert(workCategory);
-            }
+        for (Long categoryId : categoryIds) {
+            WorkCategory workCategory = new WorkCategory();
+            workCategory.setWorkId(work.getId());
+            workCategory.setCategoryId(categoryId);
+            workCategoryMapper.insert(workCategory);
         }
 
         if (dto.getElements() != null && !dto.getElements().isEmpty()) {
@@ -178,40 +179,32 @@ public class JournalWorkServiceImpl extends ServiceImpl<JournalWorkMapper, Journ
     }
 
     private List<Long> getFilteredWorkIds(WorkQueryDTO dto) {
-        List<Long> categoryIds = new java.util.ArrayList<>();
-
+        List<Long> specificCategoryIds = new ArrayList<>();
         if (dto.getCategoryId() != null) {
-            categoryIds.add(dto.getCategoryId());
+            specificCategoryIds.add(dto.getCategoryId());
         }
         if (dto.getStyleCategoryId() != null) {
-            categoryIds.add(dto.getStyleCategoryId());
+            specificCategoryIds.add(dto.getStyleCategoryId());
         }
         if (dto.getSceneCategoryId() != null) {
-            categoryIds.add(dto.getSceneCategoryId());
+            specificCategoryIds.add(dto.getSceneCategoryId());
         }
 
-        if (categoryIds.isEmpty() && dto.getCategoryType() == null) {
-            return null;
+        Set<Long> validCategoryIds = null;
+        if (!specificCategoryIds.isEmpty()) {
+            List<Category> existing = categoryMapper.selectBatchIds(specificCategoryIds);
+            validCategoryIds = existing.stream().map(Category::getId).collect(Collectors.toSet());
         }
 
-        if (!categoryIds.isEmpty()) {
-            List<Long> workIds = workCategoryMapper.selectList(
-                    new LambdaQueryWrapper<WorkCategory>().in(WorkCategory::getCategoryId, categoryIds)
-            ).stream().map(WorkCategory::getWorkId).distinct().collect(Collectors.toList());
-
-            if (dto.getCategoryType() != null) {
-                List<Long> typeCategoryIds = categoryMapper.selectList(
-                        new LambdaQueryWrapper<Category>().eq(Category::getType, dto.getCategoryType())
-                ).stream().map(Category::getId).collect(Collectors.toList());
-
-                if (!typeCategoryIds.isEmpty()) {
-                    List<Long> typeWorkIds = workCategoryMapper.selectList(
-                            new LambdaQueryWrapper<WorkCategory>().in(WorkCategory::getCategoryId, typeCategoryIds)
-                    ).stream().map(WorkCategory::getWorkId).distinct().collect(Collectors.toList());
-                    workIds.retainAll(typeWorkIds);
-                }
-            }
-            return workIds;
+        List<List<Long>> dimensionWorkIds = new ArrayList<>();
+        if (dto.getCategoryId() != null) {
+            dimensionWorkIds.add(workIdsByCategory(dto.getCategoryId(), validCategoryIds));
+        }
+        if (dto.getStyleCategoryId() != null) {
+            dimensionWorkIds.add(workIdsByCategory(dto.getStyleCategoryId(), validCategoryIds));
+        }
+        if (dto.getSceneCategoryId() != null) {
+            dimensionWorkIds.add(workIdsByCategory(dto.getSceneCategoryId(), validCategoryIds));
         }
 
         if (dto.getCategoryType() != null) {
@@ -220,15 +213,34 @@ public class JournalWorkServiceImpl extends ServiceImpl<JournalWorkMapper, Journ
             ).stream().map(Category::getId).collect(Collectors.toList());
 
             if (typeCategoryIds.isEmpty()) {
-                return new java.util.ArrayList<>();
+                dimensionWorkIds.add(new ArrayList<>());
+            } else {
+                List<Long> typeWorkIds = workCategoryMapper.selectList(
+                        new LambdaQueryWrapper<WorkCategory>().in(WorkCategory::getCategoryId, typeCategoryIds)
+                ).stream().map(WorkCategory::getWorkId).distinct().collect(Collectors.toList());
+                dimensionWorkIds.add(typeWorkIds);
             }
-
-            return workCategoryMapper.selectList(
-                    new LambdaQueryWrapper<WorkCategory>().in(WorkCategory::getCategoryId, typeCategoryIds)
-            ).stream().map(WorkCategory::getWorkId).distinct().collect(Collectors.toList());
         }
 
-        return null;
+        if (dimensionWorkIds.isEmpty()) {
+            return null;
+        }
+
+        List<Long> result = new ArrayList<>(dimensionWorkIds.get(0));
+        for (int i = 1; i < dimensionWorkIds.size(); i++) {
+            Set<Long> other = new HashSet<>(dimensionWorkIds.get(i));
+            result.removeIf(id -> !other.contains(id));
+        }
+        return result;
+    }
+
+    private List<Long> workIdsByCategory(Long categoryId, Set<Long> validCategoryIds) {
+        if (validCategoryIds != null && !validCategoryIds.contains(categoryId)) {
+            return new ArrayList<>();
+        }
+        return workCategoryMapper.selectList(
+                new LambdaQueryWrapper<WorkCategory>().eq(WorkCategory::getCategoryId, categoryId)
+        ).stream().map(WorkCategory::getWorkId).distinct().collect(Collectors.toList());
     }
 
     @Override
@@ -350,9 +362,17 @@ public class JournalWorkServiceImpl extends ServiceImpl<JournalWorkMapper, Journ
                         .collect(Collectors.toList());
 
                 List<Category> categories = categoryMapper.selectBatchIds(categoryIds);
+                Set<Long> validCategoryIds = categories.stream()
+                        .map(Category::getId)
+                        .collect(Collectors.toSet());
 
                 java.util.Map<Long, Long> categoryCountMap = workCategories.stream()
-                        .collect(Collectors.groupingBy(WorkCategory::getCategoryId, Collectors.counting()));
+                        .filter(wc -> validCategoryIds.contains(wc.getCategoryId()))
+                        .collect(Collectors.groupingBy(
+                                WorkCategory::getCategoryId,
+                                Collectors.mapping(WorkCategory::getWorkId, Collectors.toSet())))
+                        .entrySet().stream()
+                        .collect(Collectors.toMap(Map.Entry::getKey, e -> (long) e.getValue().size()));
 
                 List<CategoryStatsVO> styleStats = new java.util.ArrayList<>();
                 List<CategoryStatsVO> sceneStats = new java.util.ArrayList<>();
