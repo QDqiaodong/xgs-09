@@ -85,6 +85,39 @@
             <div class="content-text">{{ work.content }}</div>
           </div>
 
+          <div class="scene-checklist-section" v-if="work.sceneTaskCheckList && work.sceneTaskCheckList.length > 0">
+            <div class="section-header">
+              <el-icon class="section-icon"><List /></el-icon>
+              <div>
+                <h3 class="section-title">场景完成清单</h3>
+                <p class="section-desc">已完成 {{ work.sceneTaskChecked }} / {{ work.sceneTaskTotal }} 项</p>
+              </div>
+              <div class="progress-badge">
+                <span class="progress-num">{{ Math.round(work.sceneTaskChecked / work.sceneTaskTotal * 100) }}%</span>
+              </div>
+            </div>
+            <div class="scene-checklist">
+              <div
+                v-for="task in work.sceneTaskCheckList"
+                :key="task.id"
+                class="checklist-item"
+                :class="{ checked: task.checked === 1 }"
+              >
+                <div class="check-icon">
+                  <el-icon v-if="task.checked === 1"><Check /></el-icon>
+                  <span v-else class="check-circle"></span>
+                </div>
+                <div class="check-content">
+                  <div class="check-title">
+                    <span class="task-icon">{{ task.icon }}</span>
+                    <span class="task-title">{{ task.title }}</span>
+                  </div>
+                  <div class="check-desc">{{ task.description }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div class="layout-preview-section">
             <h3 class="section-title">版式网格预览</h3>
             <LayoutGridPreviewer :layout-config="workLayoutConfig" />
@@ -188,7 +221,7 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { View, Star, Share, MagicStick, Grid, Brush, Picture } from '@element-plus/icons-vue'
+import { View, Star, Share, MagicStick, Grid, Brush, Picture, List, Check } from '@element-plus/icons-vue'
 import { ElMessage } from 'element-plus'
 import Header from '@/components/Header.vue'
 import LayoutGridPreviewer from '@/components/LayoutGridPreviewer.vue'
@@ -580,11 +613,131 @@ watch(
 .content-section,
 .inspiration-section,
 .layout-section,
-.color-section {
+.color-section,
+.scene-checklist-section {
   margin-bottom: 32px;
   padding: 24px;
   border-radius: 12px;
   transition: all 0.3s;
+}
+
+.scene-checklist-section {
+  background: linear-gradient(135deg, #f3e5ff 0%, #e1bee7 100%);
+  border-left: 4px solid #9c27b0;
+}
+
+.scene-checklist-section .section-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 20px;
+}
+
+.scene-checklist-section .section-icon {
+  font-size: 24px;
+  color: #9c27b0;
+}
+
+.scene-checklist-section .section-title {
+  margin: 0 0 4px 0;
+  font-size: 18px;
+  font-weight: 700;
+  color: #4a148c;
+}
+
+.scene-checklist-section .section-desc {
+  margin: 0;
+  font-size: 13px;
+  color: #7b1fa2;
+}
+
+.progress-badge {
+  margin-left: auto;
+  background: #fff;
+  padding: 8px 16px;
+  border-radius: 20px;
+  box-shadow: 0 2px 8px rgba(156, 39, 176, 0.2);
+}
+
+.progress-num {
+  font-size: 16px;
+  font-weight: 700;
+  color: #9c27b0;
+}
+
+.scene-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.scene-checklist .checklist-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 14px 16px;
+  background: rgba(255, 255, 255, 0.6);
+  border-radius: 10px;
+  transition: all 0.3s;
+}
+
+.scene-checklist .checklist-item.checked {
+  background: rgba(76, 175, 80, 0.15);
+}
+
+.scene-checklist .check-icon {
+  width: 22px;
+  height: 22px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 2px;
+}
+
+.scene-checklist .check-icon .el-icon {
+  color: #4caf50;
+  font-size: 18px;
+}
+
+.scene-checklist .check-circle {
+  width: 18px;
+  height: 18px;
+  border: 2px solid #ba68c8;
+  border-radius: 50%;
+  display: block;
+}
+
+.scene-checklist .check-content {
+  flex: 1;
+}
+
+.scene-checklist .check-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.scene-checklist .task-icon {
+  font-size: 16px;
+}
+
+.scene-checklist .task-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #4a148c;
+}
+
+.scene-checklist .checklist-item.checked .task-title {
+  color: #2e7d32;
+  text-decoration: line-through;
+}
+
+.scene-checklist .check-desc {
+  font-size: 12px;
+  color: #6a1b9a;
+  line-height: 1.5;
 }
 
 .inspiration-section {

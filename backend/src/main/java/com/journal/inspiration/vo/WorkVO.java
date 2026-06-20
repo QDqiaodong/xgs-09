@@ -51,6 +51,12 @@ public class WorkVO {
 
     private List<WorkElementGroupVO> elementGroups;
 
+    private List<SceneTaskCheckVO> sceneTaskCheckList;
+
+    private Integer sceneTaskTotal;
+
+    private Integer sceneTaskChecked;
+
     private Boolean isFavorite;
 
     private LocalDateTime createTime;

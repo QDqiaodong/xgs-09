@@ -32,4 +32,8 @@ public class WorkPublishDTO {
     private List<Long> categoryIds;
 
     private List<WorkElementDTO> elements;
+
+    private Long sceneCategoryId;
+
+    private List<Long> checkedSceneTaskIds;
 }

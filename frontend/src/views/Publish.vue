@@ -66,6 +66,44 @@
           </div>
         </section>
 
+        <section class="form-section" v-if="sceneTaskList.length > 0">
+          <div class="section-header">
+            <div class="section-icon icon-checklist">
+              <el-icon><List /></el-icon>
+            </div>
+            <div class="section-title-wrap">
+              <h2 class="section-title">场景完成清单</h2>
+              <p class="section-desc">{{ currentSceneCategoryName }}场景的必含记录项，记录你的完成进度</p>
+            </div>
+            <div class="checklist-progress">
+              <span class="progress-text">{{ checkedTaskCount }}/{{ totalTaskCount }}</span>
+            </div>
+          </div>
+          <div class="section-body">
+            <div class="scene-checklist">
+              <div
+                v-for="task in sceneTaskList"
+                :key="task.id"
+                class="checklist-item"
+                :class="{ checked: checkedSceneTaskIds.includes(task.id) }"
+                @click="toggleSceneTask(task.id)"
+              >
+                <div class="check-icon">
+                  <el-icon v-if="checkedSceneTaskIds.includes(task.id)"><Check /></el-icon>
+                  <span v-else class="check-circle"></span>
+                </div>
+                <div class="check-content">
+                  <div class="check-title">
+                    <span class="task-icon">{{ task.icon }}</span>
+                    <span class="task-title">{{ task.title }}</span>
+                  </div>
+                  <div class="check-desc">{{ task.description }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </section>
+
         <section class="form-section">
           <div class="section-header">
             <div class="section-icon icon-layout">
@@ -419,12 +457,13 @@
 import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Plus, Close, Check, Warning, InfoFilled, Document, Grid, Brush, MagicStick, Picture } from '@element-plus/icons-vue'
+import { Plus, Close, Check, Warning, InfoFilled, Document, Grid, Brush, MagicStick, Picture, List } from '@element-plus/icons-vue'
 import Header from '@/components/Header.vue'
 import LayoutGridPreviewer from '@/components/LayoutGridPreviewer.vue'
 import { publishWork } from '@/api/work'
 import { getCategoryList } from '@/api/category'
 import { getColorPaletteList, useColorPalette } from '@/api/colorPalette'
+import { getSceneTaskList } from '@/api/scene'
 import { COVER_TYPE_LIST, DEFAULT_COVER_TYPE, getCoverTypeByCode } from '@/constants/coverTypes'
 import { getDefaultLayout } from '@/constants/layoutTemplates'
 
@@ -437,6 +476,8 @@ const coverTypeList = COVER_TYPE_LIST
 const colorPaletteList = ref([])
 const selectedPaletteId = ref(null)
 const selectedPalette = ref(null)
+const sceneTaskList = ref([])
+const checkedSceneTaskIds = ref([])
 
 const MAX_PRIMARY = 2
 const MAX_SECONDARY = 4
@@ -487,6 +528,19 @@ const selectedCategories = computed(() => {
 const selectedCategoryNames = computed(() => {
   return selectedCategories.value.map(cat => cat.name).join('、')
 })
+
+const currentSceneCategoryId = computed(() => {
+  const sceneCat = selectedCategories.value.find(cat => cat.type === 'scene')
+  return sceneCat ? sceneCat.id : null
+})
+
+const currentSceneCategoryName = computed(() => {
+  const sceneCat = selectedCategories.value.find(cat => cat.type === 'scene')
+  return sceneCat ? sceneCat.name : ''
+})
+
+const checkedTaskCount = computed(() => checkedSceneTaskIds.value.length)
+const totalTaskCount = computed(() => sceneTaskList.value.length)
 
 const currentLayoutConfig = computed(() => {
   if (!form.layoutConfig) {
@@ -633,12 +687,46 @@ const loadCategories = async () => {
   loadColorPalettes()
 }
 
+const loadSceneTasks = async (sceneCategoryId) => {
+  if (!sceneCategoryId) {
+    sceneTaskList.value = []
+    checkedSceneTaskIds.value = []
+    return
+  }
+  try {
+    const res = await getSceneTaskList(sceneCategoryId)
+    sceneTaskList.value = res.data || []
+    checkedSceneTaskIds.value = []
+  } catch (e) {
+    console.error('加载场景任务列表失败', e)
+    sceneTaskList.value = []
+    checkedSceneTaskIds.value = []
+  }
+}
+
+const toggleSceneTask = (taskId) => {
+  const index = checkedSceneTaskIds.value.indexOf(taskId)
+  if (index > -1) {
+    checkedSceneTaskIds.value.splice(index, 1)
+  } else {
+    checkedSceneTaskIds.value.push(taskId)
+  }
+}
+
 watch(
   () => form.categoryIds,
   () => {
     loadColorPalettes()
   },
   { deep: true }
+)
+
+watch(
+  () => currentSceneCategoryId.value,
+  (newVal) => {
+    loadSceneTasks(newVal)
+  },
+  { immediate: false }
 )
 
 const getPalettePreviewColors = (palette) => {
@@ -759,10 +847,16 @@ const handleSubmit = async () => {
   if (!form.layoutConfig) {
     generateLayoutConfig()
   }
+
+  const submitData = {
+    ...form,
+    sceneCategoryId: currentSceneCategoryId.value,
+    checkedSceneTaskIds: checkedSceneTaskIds.value
+  }
   
   submitting.value = true
   try {
-    await publishWork(form)
+    await publishWork(submitData)
     ElMessage.success('发布成功！')
     router.push('/')
   } catch (e) {
@@ -1482,6 +1576,106 @@ onMounted(() => {
   flex-shrink: 0;
   font-size: 18px;
   margin-top: 1px;
+}
+
+.icon-checklist {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.checklist-progress {
+  background: #fff;
+  padding: 6px 14px;
+  border-radius: 20px;
+  border: 1px solid #e8e8e8;
+}
+
+.progress-text {
+  font-size: 14px;
+  font-weight: 600;
+  color: #667eea;
+}
+
+.scene-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.checklist-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px;
+  background: #fafafa;
+  border: 2px solid #e8e8e8;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.checklist-item:hover {
+  border-color: #ff9a9e;
+  background: #fff5f8;
+}
+
+.checklist-item.checked {
+  border-color: #67c23a;
+  background: linear-gradient(135deg, #f0f9eb 0%, #e1f3d8 100%);
+}
+
+.check-icon {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 2px;
+}
+
+.check-icon .el-icon {
+  color: #67c23a;
+  font-size: 20px;
+}
+
+.check-circle {
+  width: 20px;
+  height: 20px;
+  border: 2px solid #ccc;
+  border-radius: 50%;
+  display: block;
+}
+
+.check-content {
+  flex: 1;
+}
+
+.check-title {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.task-icon {
+  font-size: 18px;
+}
+
+.task-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #333;
+}
+
+.checklist-item.checked .task-title {
+  color: #67c23a;
+  text-decoration: line-through;
+}
+
+.check-desc {
+  font-size: 13px;
+  color: #888;
+  line-height: 1.5;
 }
 
 @media (max-width: 600px) {

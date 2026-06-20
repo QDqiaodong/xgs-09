@@ -7,3 +7,11 @@ export const getSceneTaskList = (sceneCategoryId) => {
     params: { sceneCategoryId }
   })
 }
+
+export const getSceneTaskCheckList = (workId, sceneCategoryId) => {
+  return request({
+    url: '/work-scene-task-check/list',
+    method: 'get',
+    params: { workId, sceneCategoryId }
+  })
+}

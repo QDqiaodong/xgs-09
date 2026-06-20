@@ -127,6 +127,24 @@ CREATE TABLE color_palette (
   INDEX idx_deleted (deleted)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+DROP TABLE IF EXISTS work_scene_task_check;
+CREATE TABLE work_scene_task_check (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  work_id BIGINT NOT NULL,
+  scene_task_id BIGINT NOT NULL,
+  scene_category_id BIGINT NOT NULL,
+  user_id BIGINT NOT NULL,
+  checked TINYINT DEFAULT 0,
+  create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+  update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  deleted TINYINT DEFAULT 0,
+  UNIQUE KEY uk_work_task (work_id, scene_task_id),
+  INDEX idx_work_id (work_id),
+  INDEX idx_scene_task_id (scene_task_id),
+  INDEX idx_scene_category_id (scene_category_id),
+  INDEX idx_user_id (user_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 SET FOREIGN_KEY_CHECKS = 1;
 
 INSERT INTO sys_user (username, password, nickname, bio) VALUES

@@ -26,6 +26,7 @@ import com.journal.inspiration.vo.ColorFamilyStatsVO;
 import com.journal.inspiration.vo.ColorUsageVO;
 import com.journal.inspiration.vo.SingleColorStatsVO;
 import com.journal.inspiration.vo.ScenePreferenceVO;
+import com.journal.inspiration.vo.SceneTaskCheckVO;
 import com.journal.inspiration.vo.StatusStatsVO;
 import com.journal.inspiration.vo.StylePreferenceVO;
 import com.journal.inspiration.vo.UserStyleProfileVO;
@@ -59,6 +60,7 @@ public class JournalWorkServiceImpl extends ServiceImpl<JournalWorkMapper, Journ
     private final UserMapper userMapper;
     private final FavoriteService favoriteService;
     private final WorkElementMapper workElementMapper;
+    private final WorkSceneTaskCheckService workSceneTaskCheckService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -145,6 +147,15 @@ public class JournalWorkServiceImpl extends ServiceImpl<JournalWorkMapper, Journ
                 }
                 workElementMapper.insert(element);
             }
+        }
+
+        if (dto.getSceneCategoryId() != null) {
+            workSceneTaskCheckService.saveCheckList(
+                    work.getId(),
+                    dto.getUserId(),
+                    dto.getSceneCategoryId(),
+                    dto.getCheckedSceneTaskIds()
+            );
         }
 
         return work.getId();
@@ -343,7 +354,21 @@ public class JournalWorkServiceImpl extends ServiceImpl<JournalWorkMapper, Journ
         }
 
         WorkVO vo = convertToVO(work);
-        
+
+        if (vo.getCategories() != null && !vo.getCategories().isEmpty()) {
+            Long sceneCategoryId = vo.getCategories().stream()
+                    .filter(cat -> "scene".equals(cat.getType()))
+                    .map(CategoryVO::getId)
+                    .findFirst()
+                    .orElse(null);
+            if (sceneCategoryId != null) {
+                List<SceneTaskCheckVO> checkList = workSceneTaskCheckService.getCheckListByWorkId(id, sceneCategoryId);
+                vo.setSceneTaskCheckList(checkList);
+                vo.setSceneTaskTotal(checkList.size());
+                vo.setSceneTaskChecked((int) checkList.stream().filter(item -> item.getChecked() != null && item.getChecked() == 1).count());
+            }
+        }
+
         if (userId != null) {
             vo.setIsFavorite(favoriteService.isFavorite(userId, id));
         }
