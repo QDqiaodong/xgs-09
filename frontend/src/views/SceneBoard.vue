@@ -118,15 +118,32 @@
         </div>
       </div>
 
-      <div class="empty" v-if="!loading && sceneTasks.length === 0">
-        <el-empty description="该场景暂无记录项目模板" />
+      <div class="empty error-state" v-if="!loading && tasksError">
+        <el-empty :description="tasksErrorMessage" image-size="120">
+          <template #image>
+            <div class="error-icon-wrapper">
+              <el-icon :size="80" color="#f56c6c"><WarningFilled /></el-icon>
+            </div>
+          </template>
+          <template #description>
+            <span class="error-text">{{ tasksErrorMessage }}</span>
+          </template>
+          <el-button type="primary" @click="loadSceneTasks">
+            <el-icon class="mr-2"><RefreshRight /></el-icon>
+            重新加载
+          </el-button>
+        </el-empty>
       </div>
 
-      <div class="related-section" v-if="relatedWorks.length > 0 || !loading">
+      <div class="empty" v-else-if="!loading && sceneTasks.length === 0">
+        <el-empty :description="`${currentSceneName}暂无记录项目模板`" />
+      </div>
+
+      <div class="related-section" v-if="relatedWorks.length > 0 || !worksLoading">
         <div class="section-header">
           <h2 class="section-title">
             <span class="title-icon">🌟</span>
-            {{ currentSceneName }}灵感作品
+            {{ creativePurposeText }}
           </h2>
           <router-link
             :to="{ path: '/category', query: { sceneCategoryId: currentSceneId } }"
@@ -145,8 +162,25 @@
           />
         </div>
 
-        <div class="empty" v-if="!worksLoading && relatedWorks.length === 0">
-          <el-empty description="暂无灵感作品，快来创作第一篇吧~" />
+        <div class="empty error-state" v-if="!worksLoading && worksError">
+          <el-empty :description="worksErrorMessage" image-size="100">
+            <template #image>
+              <div class="error-icon-wrapper small">
+                <el-icon :size="60" color="#f56c6c"><WarningFilled /></el-icon>
+              </div>
+            </template>
+            <template #description>
+              <span class="error-text">{{ worksErrorMessage }}</span>
+            </template>
+            <el-button type="primary" size="small" @click="loadRelatedWorks">
+              <el-icon class="mr-2"><RefreshRight /></el-icon>
+              重新加载
+            </el-button>
+          </el-empty>
+        </div>
+
+        <div class="empty" v-else-if="!worksLoading && relatedWorks.length === 0">
+          <el-empty :description="`${currentSceneName}暂无灵感作品，快来创作第一篇吧~`" />
         </div>
       </div>
     </main>
@@ -156,7 +190,7 @@
 <script setup>
 import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { ArrowLeft, ArrowRight, Edit, View, Collection, EditPen } from '@element-plus/icons-vue'
+import { ArrowLeft, ArrowRight, Edit, View, Collection, EditPen, WarningFilled, RefreshRight } from '@element-plus/icons-vue'
 import Header from '@/components/Header.vue'
 import WorkCard from '@/components/WorkCard.vue'
 import { getSceneTaskList } from '@/api/scene'
@@ -171,12 +205,24 @@ const worksLoading = ref(false)
 const sceneTasks = ref([])
 const allScenes = ref([])
 const relatedWorks = ref([])
+const tasksError = ref(false)
+const tasksErrorMessage = ref('')
+const worksError = ref(false)
+const worksErrorMessage = ref('')
 
 const currentSceneId = computed(() => Number(route.query.sceneCategoryId) || null)
-const currentSceneName = computed(() => route.query.sceneName || '场景记录')
+const currentSceneName = computed(() => {
+  const scene = allScenes.value.find(s => s.id === currentSceneId.value)
+  return scene?.name || route.query.sceneName || '场景记录'
+})
 
 const currentScene = computed(() => {
   return allScenes.value.find(s => s.id === currentSceneId.value)
+})
+
+const creativePurposeText = computed(() => {
+  const sceneName = currentSceneName.value
+  return `${sceneName}灵感作品`
 })
 
 const defaultBanner = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)'
@@ -205,21 +251,33 @@ const loadAllScenes = async () => {
 }
 
 const loadSceneTasks = async () => {
-  if (!currentSceneId.value) return
+  if (!currentSceneId.value) {
+    sceneTasks.value = []
+    return
+  }
   loading.value = true
+  tasksError.value = false
+  tasksErrorMessage.value = ''
   try {
     const res = await getSceneTaskList(currentSceneId.value)
     sceneTasks.value = res.data || []
   } catch (e) {
-    console.error('加载场景任务失败', e)
+    tasksError.value = true
+    tasksErrorMessage.value = e.message || '加载记录项目失败，请检查网络后重试'
+    sceneTasks.value = []
   } finally {
     loading.value = false
   }
 }
 
 const loadRelatedWorks = async () => {
-  if (!currentSceneId.value) return
+  if (!currentSceneId.value) {
+    relatedWorks.value = []
+    return
+  }
   worksLoading.value = true
+  worksError.value = false
+  worksErrorMessage.value = ''
   try {
     const res = await getWorkList({
       pageNum: 1,
@@ -229,7 +287,9 @@ const loadRelatedWorks = async () => {
     })
     relatedWorks.value = res.data?.records || []
   } catch (e) {
-    console.error('加载相关作品失败', e)
+    worksError.value = true
+    worksErrorMessage.value = e.message || '加载灵感作品失败，请检查网络后重试'
+    relatedWorks.value = []
   } finally {
     worksLoading.value = false
   }
@@ -692,5 +752,36 @@ onMounted(() => {
 
 .empty {
   padding: 40px 0;
+}
+
+.error-state {
+  .error-icon-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 120px;
+    height: 120px;
+    margin: 0 auto 20px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #fff5f5 0%, #ffe5e5 100%);
+  }
+
+  .error-icon-wrapper.small {
+    width: 100px;
+    height: 100px;
+  }
+
+  .error-text {
+    color: #f56c6c;
+    font-size: 14px;
+  }
+
+  :deep(.el-empty__description) {
+    margin-bottom: 24px;
+  }
+}
+
+.mr-2 {
+  margin-right: 6px;
 }
 </style>

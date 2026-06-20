@@ -68,7 +68,24 @@
         </div>
       </div>
 
-      <div class="empty" v-if="!loading && sceneCategories.length === 0">
+      <div class="empty error-state" v-if="!loading && error">
+        <el-empty :description="errorMessage" image-size="120">
+          <template #image>
+            <div class="error-icon-wrapper">
+              <el-icon :size="80" color="#f56c6c"><WarningFilled /></el-icon>
+            </div>
+          </template>
+          <template #description>
+            <span class="error-text">{{ errorMessage }}</span>
+          </template>
+          <el-button type="primary" @click="loadSceneCategories">
+            <el-icon class="mr-2"><RefreshRight /></el-icon>
+            重新加载
+          </el-button>
+        </el-empty>
+      </div>
+
+      <div class="empty" v-else-if="!loading && sceneCategories.length === 0">
         <el-empty description="暂无场景分类" />
       </div>
 
@@ -105,13 +122,15 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRouter } from 'vue-router'
-import { ArrowRight } from '@element-plus/icons-vue'
+import { ArrowRight, WarningFilled, RefreshRight } from '@element-plus/icons-vue'
 import Header from '@/components/Header.vue'
 import { getCategoryList } from '@/api/category'
 
 const router = useRouter()
 const sceneCategories = ref([])
 const loading = ref(false)
+const error = ref(false)
+const errorMessage = ref('')
 
 const featuredScenes = computed(() => {
   return [...sceneCategories.value]
@@ -121,9 +140,15 @@ const featuredScenes = computed(() => {
 
 const loadSceneCategories = async () => {
   loading.value = true
+  error.value = false
+  errorMessage.value = ''
   try {
     const res = await getCategoryList('scene')
     sceneCategories.value = res.data || []
+  } catch (e) {
+    error.value = true
+    errorMessage.value = e.message || '加载失败，请检查网络后重试'
+    sceneCategories.value = []
   } finally {
     loading.value = false
   }
@@ -517,5 +542,31 @@ onMounted(() => {
 
 .empty {
   padding: 60px 0;
+}
+
+.error-state {
+  .error-icon-wrapper {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 120px;
+    height: 120px;
+    margin: 0 auto 20px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #fff5f5 0%, #ffe5e5 100%);
+  }
+
+  .error-text {
+    color: #f56c6c;
+    font-size: 14px;
+  }
+
+  :deep(.el-empty__description) {
+    margin-bottom: 24px;
+  }
+}
+
+.mr-2 {
+  margin-right: 6px;
 }
 </style>
