@@ -5,6 +5,7 @@ import com.journal.inspiration.common.Result;
 import com.journal.inspiration.common.UserContext;
 import com.journal.inspiration.dto.WorkPublishDTO;
 import com.journal.inspiration.dto.WorkQueryDTO;
+import com.journal.inspiration.dto.WorkUpdateDTO;
 import com.journal.inspiration.service.JournalWorkService;
 import com.journal.inspiration.vo.WorkStatsVO;
 import com.journal.inspiration.vo.WorkVO;
@@ -23,6 +24,22 @@ public class JournalWorkController {
     public Result<Long> publish(@Valid @RequestBody WorkPublishDTO dto) {
         Long id = workService.publishWork(dto);
         return Result.success(id);
+    }
+
+    @PutMapping
+    public Result<Boolean> update(@Valid @RequestBody WorkUpdateDTO dto) {
+        try {
+            Long operatorId = UserContext.getCurrentUserId();
+            if (operatorId == null || !operatorId.equals(dto.getUserId())) {
+                return Result.error(403, "无权限修改该作品");
+            }
+            boolean result = workService.updateWork(dto);
+            return Result.success(result);
+        } catch (IllegalArgumentException e) {
+            return Result.error(400, e.getMessage());
+        } catch (SecurityException e) {
+            return Result.error(403, e.getMessage());
+        }
     }
 
     @GetMapping("/{id}")

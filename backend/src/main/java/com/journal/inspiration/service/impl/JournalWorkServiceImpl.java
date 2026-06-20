@@ -8,6 +8,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.journal.inspiration.dto.WorkElementDTO;
 import com.journal.inspiration.dto.WorkPublishDTO;
 import com.journal.inspiration.dto.WorkQueryDTO;
+import com.journal.inspiration.dto.WorkUpdateDTO;
 import com.journal.inspiration.common.ColorSchemeValidator;
 import com.journal.inspiration.common.CoverTypeEnum;
 import com.journal.inspiration.common.ElementCategoryEnum;
@@ -81,8 +82,11 @@ public class JournalWorkServiceImpl extends ServiceImpl<JournalWorkMapper, Journ
             throw new IllegalArgumentException(colorValidation.getMessage());
         }
 
+        String normalizedColorScheme = ColorSchemeValidator.normalize(dto.getColorScheme());
+
         JournalWork work = new JournalWork();
         BeanUtil.copyProperties(dto, work);
+        work.setColorScheme(normalizedColorScheme);
         if (work.getCoverType() == null || CoverTypeEnum.getByCode(work.getCoverType()) == null) {
             work.setCoverType(CoverTypeEnum.getDefault().getCode());
         }
@@ -127,6 +131,180 @@ public class JournalWorkServiceImpl extends ServiceImpl<JournalWorkMapper, Journ
     }
 
     @Override
+    @Transactional(rollbackFor = Exception.class)
+    @CacheEvict(value = {"latestWorks", "hotWorks"}, allEntries = true)
+    public boolean updateWork(WorkUpdateDTO dto) {
+        JournalWork existWork = getById(dto.getId());
+        if (existWork == null) {
+            throw new IllegalArgumentException("作品不存在");
+        }
+        if (dto.getUserId() == null || !existWork.getUserId().equals(dto.getUserId())) {
+            throw new SecurityException("无权限修改该作品");
+        }
+        if (WorkStatusEnum.isArchived(existWork.getStatus())) {
+            throw new IllegalArgumentException("已归档作品无法修改");
+        }
+
+        List<Long> categoryIds = new ArrayList<>();
+        if (dto.getCategoryIds() != null) {
+            categoryIds = dto.getCategoryIds().stream().distinct().collect(Collectors.toList());
+        }
+        List<Category> categories = new ArrayList<>();
+        if (!categoryIds.isEmpty()) {
+            categories = categoryMapper.selectBatchIds(categoryIds);
+            if (categories.size() != categoryIds.size()) {
+                throw new IllegalArgumentException("存在无效或已失效的分类编号");
+            }
+        }
+
+        if (dto.getElements() != null && !dto.getElements().isEmpty()) {
+            for (WorkElementDTO elementDTO : dto.getElements()) {
+                if (ElementCategoryEnum.getByCode(elementDTO.getCategory()) == null) {
+                    throw new IllegalArgumentException("存在无效的元素分类: " + elementDTO.getCategory());
+                }
+            }
+        }
+
+        String normalizedColorScheme = null;
+        if (dto.getColorScheme() != null) {
+            ColorSchemeValidator.ValidationResult colorValidation = ColorSchemeValidator.validate(dto.getColorScheme());
+            if (!colorValidation.isValid()) {
+                throw new IllegalArgumentException(colorValidation.getMessage());
+            }
+            normalizedColorScheme = ColorSchemeValidator.normalize(dto.getColorScheme());
+        }
+
+        boolean coverChanged = false;
+        String oldCoverImage = existWork.getCoverImage();
+        if (dto.getCoverImage() != null && !dto.getCoverImage().equals(oldCoverImage)) {
+            coverChanged = true;
+        }
+
+        JournalWork work = new JournalWork();
+        work.setId(dto.getId());
+        if (dto.getTitle() != null) {
+            work.setTitle(dto.getTitle());
+        }
+        if (dto.getCoverImage() != null) {
+            work.setCoverImage(dto.getCoverImage());
+        }
+        if (dto.getCoverType() != null) {
+            if (CoverTypeEnum.getByCode(dto.getCoverType()) == null) {
+                work.setCoverType(CoverTypeEnum.getDefault().getCode());
+            } else {
+                work.setCoverType(dto.getCoverType());
+            }
+        }
+        if (dto.getContent() != null) {
+            work.setContent(dto.getContent());
+        }
+        if (dto.getLayoutIdea() != null) {
+            work.setLayoutIdea(dto.getLayoutIdea());
+        }
+        if (dto.getLayoutConfig() != null) {
+            if (dto.getLayoutConfig().trim().isEmpty()) {
+                String defaultLayoutJson = LayoutTemplateConfig.getDefaultLayoutJson(categories);
+                if (defaultLayoutJson != null) {
+                    work.setLayoutConfig(defaultLayoutJson);
+                }
+            } else {
+                work.setLayoutConfig(dto.getLayoutConfig());
+            }
+        }
+        if (dto.getColorScheme() != null) {
+            work.setColorScheme(normalizedColorScheme);
+        }
+        if (dto.getInspiration() != null) {
+            work.setInspiration(dto.getInspiration());
+        }
+
+        boolean updated = updateById(work);
+        if (!updated) {
+            return false;
+        }
+
+        if (coverChanged && StrUtil.isNotBlank(oldCoverImage)) {
+            handleOldCoverResource(dto.getId(), oldCoverImage);
+        }
+
+        if (dto.getCategoryIds() != null) {
+            workCategoryMapper.delete(
+                    new LambdaQueryWrapper<WorkCategory>().eq(WorkCategory::getWorkId, dto.getId())
+            );
+            for (Long categoryId : categoryIds) {
+                WorkCategory workCategory = new WorkCategory();
+                workCategory.setWorkId(dto.getId());
+                workCategory.setCategoryId(categoryId);
+                workCategoryMapper.insert(workCategory);
+            }
+        }
+
+        if (dto.getElements() != null) {
+            workElementMapper.delete(
+                    new LambdaQueryWrapper<WorkElement>().eq(WorkElement::getWorkId, dto.getId())
+            );
+            if (!dto.getElements().isEmpty()) {
+                int sort = 0;
+                for (WorkElementDTO elementDTO : dto.getElements()) {
+                    WorkElement element = new WorkElement();
+                    BeanUtil.copyProperties(elementDTO, element);
+                    element.setWorkId(dto.getId());
+                    if (element.getQuantity() == null || element.getQuantity() < 1) {
+                        element.setQuantity(1);
+                    }
+                    if (element.getSort() == null) {
+                        element.setSort(sort++);
+                    }
+                    workElementMapper.insert(element);
+                }
+            }
+        }
+
+        return true;
+    }
+
+    private void handleOldCoverResource(Long workId, String oldCoverImage) {
+        try {
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+            String coverHistoryKey = "cover_history_" + workId;
+            
+            com.fasterxml.jackson.databind.JsonNode existingNode = null;
+            try {
+                String existingHistory = getCoverHistoryFromDatabase(workId);
+                if (existingHistory != null) {
+                    existingNode = mapper.readTree(existingHistory);
+                }
+            } catch (Exception e) {
+                existingNode = mapper.createArrayNode();
+            }
+
+            com.fasterxml.jackson.databind.node.ArrayNode historyArray;
+            if (existingNode != null && existingNode.isArray()) {
+                historyArray = (com.fasterxml.jackson.databind.node.ArrayNode) existingNode;
+            } else {
+                historyArray = mapper.createArrayNode();
+            }
+
+            com.fasterxml.jackson.databind.node.ObjectNode historyItem = mapper.createObjectNode();
+            historyItem.put("url", oldCoverImage);
+            historyItem.put("replaceTime", java.time.LocalDateTime.now().toString());
+            historyItem.put("status", "replaced");
+            historyArray.add(historyItem);
+
+            String newHistory = mapper.writeValueAsString(historyArray);
+            saveCoverHistoryToDatabase(workId, newHistory);
+        } catch (Exception e) {
+        }
+    }
+
+    private String getCoverHistoryFromDatabase(Long workId) {
+        return null;
+    }
+
+    private void saveCoverHistoryToDatabase(Long workId, String history) {
+    }
+
+    @Override
     public WorkVO getWorkDetail(Long id, Long userId) {
         JournalWork work = getById(id);
         if (work == null) {
@@ -159,6 +337,9 @@ public class JournalWorkServiceImpl extends ServiceImpl<JournalWorkMapper, Journ
 
         if (dto.getUserId() != null) {
             wrapper.eq(JournalWork::getUserId, dto.getUserId());
+        } else {
+            wrapper.isNotNull(JournalWork::getCoverImage);
+            wrapper.ne(JournalWork::getCoverImage, "");
         }
 
         List<Long> filteredWorkIds = getFilteredWorkIds(dto);
@@ -289,10 +470,61 @@ public class JournalWorkServiceImpl extends ServiceImpl<JournalWorkMapper, Journ
         if (operatorId == null || !existWork.getUserId().equals(operatorId)) {
             throw new SecurityException("无权限修改该作品状态");
         }
+
+        boolean isArchiving = WorkStatusEnum.isArchived(status) && !WorkStatusEnum.isArchived(existWork.getStatus());
+        String oldCoverImage = existWork.getCoverImage();
+
         JournalWork work = new JournalWork();
         work.setId(id);
         work.setStatus(status);
-        return updateById(work);
+
+        if (isArchiving) {
+            work.setCoverImage(null);
+        }
+
+        boolean updated = updateById(work);
+        if (!updated) {
+            return false;
+        }
+
+        if (isArchiving && StrUtil.isNotBlank(oldCoverImage)) {
+            handleArchivedCoverResource(id, oldCoverImage);
+        }
+
+        return true;
+    }
+
+    private void handleArchivedCoverResource(Long workId, String oldCoverImage) {
+        try {
+            com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+
+            com.fasterxml.jackson.databind.JsonNode existingNode = null;
+            try {
+                String existingHistory = getCoverHistoryFromDatabase(workId);
+                if (existingHistory != null) {
+                    existingNode = mapper.readTree(existingHistory);
+                }
+            } catch (Exception e) {
+                existingNode = mapper.createArrayNode();
+            }
+
+            com.fasterxml.jackson.databind.node.ArrayNode historyArray;
+            if (existingNode != null && existingNode.isArray()) {
+                historyArray = (com.fasterxml.jackson.databind.node.ArrayNode) existingNode;
+            } else {
+                historyArray = mapper.createArrayNode();
+            }
+
+            com.fasterxml.jackson.databind.node.ObjectNode historyItem = mapper.createObjectNode();
+            historyItem.put("url", oldCoverImage);
+            historyItem.put("archiveTime", java.time.LocalDateTime.now().toString());
+            historyItem.put("status", "archived");
+            historyArray.add(historyItem);
+
+            String newHistory = mapper.writeValueAsString(historyArray);
+            saveCoverHistoryToDatabase(workId, newHistory);
+        } catch (Exception e) {
+        }
     }
 
     @Override
@@ -450,7 +682,12 @@ public class JournalWorkServiceImpl extends ServiceImpl<JournalWorkMapper, Journ
         }
 
         if (StrUtil.isNotBlank(work.getColorScheme())) {
-            vo.setColorScheme(enrichColorSchemeWithType(work.getColorScheme()));
+            String normalized = ColorSchemeValidator.normalize(work.getColorScheme());
+            if (normalized != null) {
+                vo.setColorScheme(enrichColorSchemeWithType(normalized));
+            } else {
+                vo.setColorScheme(null);
+            }
         }
 
         vo.setElementGroups(getWorkElementGroups(work.getId()));

@@ -4,6 +4,7 @@ import cn.hutool.core.bean.BeanUtil;
 import cn.hutool.core.util.StrUtil;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.journal.inspiration.common.ColorSchemeValidator;
 import com.journal.inspiration.entity.ColorPalette;
 import com.journal.inspiration.mapper.ColorPaletteMapper;
 import com.journal.inspiration.service.ColorPaletteService;
@@ -80,6 +81,16 @@ public class ColorPaletteServiceImpl extends ServiceImpl<ColorPaletteMapper, Col
         } else {
             vo.setCategoryIdList(List.of());
         }
+
+        if (StrUtil.isNotBlank(palette.getColorScheme())) {
+            String normalized = ColorSchemeValidator.normalize(palette.getColorScheme());
+            if (normalized != null) {
+                vo.setColorScheme(normalized);
+            } else {
+                vo.setColorScheme(null);
+            }
+        }
+
         return vo;
     }
 }

@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.journal.inspiration.dto.WorkPublishDTO;
 import com.journal.inspiration.dto.WorkQueryDTO;
+import com.journal.inspiration.dto.WorkUpdateDTO;
 import com.journal.inspiration.entity.JournalWork;
 import com.journal.inspiration.vo.WorkStatsVO;
 import com.journal.inspiration.vo.WorkVO;
@@ -11,6 +12,8 @@ import com.journal.inspiration.vo.WorkVO;
 public interface JournalWorkService extends IService<JournalWork> {
 
     Long publishWork(WorkPublishDTO dto);
+
+    boolean updateWork(WorkUpdateDTO dto);
 
     WorkVO getWorkDetail(Long id, Long userId);
 
