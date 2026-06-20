@@ -90,6 +90,38 @@
             <LayoutGridPreviewer :layout-config="workLayoutConfig" />
           </div>
 
+          <div class="material-breakdown-section">
+            <div class="section-header">
+              <el-icon class="section-icon"><MagicStick /></el-icon>
+              <h3 class="section-title">素材拆解卡</h3>
+            </div>
+            <p class="section-desc">了解这篇手账由哪些视觉材料组成</p>
+            <div class="material-cards">
+              <div
+                v-for="material in materialList"
+                :key="material.key"
+                class="material-card"
+                :style="{ borderColor: material.borderColor, background: material.bgColor }"
+              >
+                <div class="material-icon">{{ material.icon }}</div>
+                <div class="material-info">
+                  <span class="material-name">{{ material.name }}</span>
+                  <span class="material-count">{{ material.count }} 个</span>
+                </div>
+                <div class="material-description">{{ material.description }}</div>
+                <div class="material-samples" v-if="material.areas && material.areas.length > 0">
+                  <span
+                    v-for="(area, index) in material.areas.slice(0, 3)"
+                    :key="index"
+                    class="material-tag"
+                  >
+                    {{ area.label }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div class="inspiration-section" v-if="work.inspiration">
             <div class="section-header">
               <el-icon class="section-icon"><MagicStick /></el-icon>
@@ -136,6 +168,7 @@ import { toggleFavorite } from '@/api/favorite'
 import { getDefaultLayout } from '@/constants/layoutTemplates'
 import { getCoverTypeByCode } from '@/constants/coverTypes'
 import { getStyleConfig } from '@/constants/styleTagConfig'
+import { MATERIAL_TYPES, extractMaterialStats } from '@/constants/materialTypes'
 
 const route = useRoute()
 const router = useRouter()
@@ -207,6 +240,24 @@ const hasValidSwatches = computed(() => {
   } catch (e) {
     return false
   }
+})
+
+const materialList = computed(() => {
+  const stats = extractMaterialStats(workLayoutConfig.value)
+  const list = []
+
+  for (const [key, config] of Object.entries(MATERIAL_TYPES)) {
+    const stat = stats[key]
+    if (stat && stat.count > 0) {
+      list.push({
+        ...config,
+        count: stat.count,
+        areas: stat.areas
+      })
+    }
+  }
+
+  return list
 })
 
 const loadDetail = async () => {
@@ -528,5 +579,99 @@ watch(
   color: #555;
   font-size: 15px;
   white-space: pre-wrap;
+}
+
+.material-breakdown-section {
+  margin-bottom: 32px;
+  padding: 24px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #fff9e6 0%, #fff0f5 100%);
+  border-left: 4px solid #ff9a9e;
+}
+
+.material-breakdown-section .section-icon {
+  color: #ff6b9d;
+}
+
+.material-breakdown-section .section-title {
+  margin-bottom: 0;
+  border-left: none;
+  padding-left: 0;
+  color: #c2185b;
+}
+
+.section-desc {
+  font-size: 13px;
+  color: #888;
+  margin: 0 0 20px 36px;
+}
+
+.material-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+  gap: 16px;
+}
+
+.material-card {
+  border: 2px solid;
+  border-radius: 12px;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  transition: all 0.3s;
+}
+
+.material-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+}
+
+.material-icon {
+  font-size: 32px;
+}
+
+.material-info {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.material-name {
+  font-size: 16px;
+  font-weight: 700;
+  color: #333;
+}
+
+.material-count {
+  font-size: 13px;
+  font-weight: 600;
+  color: #666;
+  background: rgba(255, 255, 255, 0.6);
+  padding: 2px 10px;
+  border-radius: 10px;
+}
+
+.material-description {
+  font-size: 12px;
+  color: #777;
+  line-height: 1.5;
+}
+
+.material-samples {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: auto;
+  padding-top: 8px;
+  border-top: 1px dashed rgba(0, 0, 0, 0.1);
+}
+
+.material-tag {
+  font-size: 11px;
+  padding: 3px 8px;
+  background: rgba(255, 255, 255, 0.7);
+  border-radius: 8px;
+  color: #555;
 }
 </style>

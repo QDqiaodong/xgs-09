@@ -8,8 +8,20 @@
           <span class="legend-label">文字区</span>
         </span>
         <span class="legend-item">
+          <span class="legend-color legend-handwriting"></span>
+          <span class="legend-label">手写字</span>
+        </span>
+        <span class="legend-item">
           <span class="legend-color legend-sticker"></span>
           <span class="legend-label">贴纸区</span>
+        </span>
+        <span class="legend-item">
+          <span class="legend-color legend-tape"></span>
+          <span class="legend-label">胶带</span>
+        </span>
+        <span class="legend-item">
+          <span class="legend-color legend-stamp"></span>
+          <span class="legend-label">印章</span>
         </span>
         <span class="legend-item">
           <span class="legend-color legend-image"></span>
@@ -36,8 +48,17 @@
             <div v-if="area.type === 'text'" class="area-text-lines">
               <span v-for="i in 3" :key="i" class="text-line"></span>
             </div>
+            <div v-else-if="area.type === 'handwriting'" class="area-handwriting">
+              <span class="handwriting-text">手写字示例</span>
+            </div>
             <div v-else-if="area.type === 'sticker'" class="area-stickers">
               <span v-for="i in (area.stickerCount || 3)" :key="i" class="sticker-dot"></span>
+            </div>
+            <div v-else-if="area.type === 'tape'" class="area-tapes">
+              <span v-for="i in (area.tapeCount || 2)" :key="i" class="tape-strip"></span>
+            </div>
+            <div v-else-if="area.type === 'stamp'" class="area-stamps">
+              <span v-for="i in (area.stampCount || 2)" :key="i" class="stamp-icon">印</span>
             </div>
             <div v-else-if="area.type === 'image'" class="area-image-placeholder">
               <el-icon><Picture /></el-icon>
@@ -60,8 +81,20 @@
           <span class="info-value">{{ textAreaCount }} 块</span>
         </div>
         <div class="info-item">
-          <span class="info-label">贴纸区</span>
-          <span class="info-value">{{ stickerAreaCount }} 块</span>
+          <span class="info-label">手写字</span>
+          <span class="info-value">{{ handwritingAreaCount }} 块</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">贴纸</span>
+          <span class="info-value">{{ stickerCount }} 个</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">胶带</span>
+          <span class="info-value">{{ tapeCount }} 条</span>
+        </div>
+        <div class="info-item">
+          <span class="info-label">印章</span>
+          <span class="info-value">{{ stampCount }} 枚</span>
         </div>
       </div>
     </div>
@@ -92,8 +125,26 @@ const textAreaCount = computed(() => {
   return layoutAreas.value.filter(a => a.type === 'text').length
 })
 
-const stickerAreaCount = computed(() => {
-  return layoutAreas.value.filter(a => a.type === 'sticker').length
+const handwritingAreaCount = computed(() => {
+  return layoutAreas.value.filter(a => a.type === 'handwriting').length
+})
+
+const stickerCount = computed(() => {
+  return layoutAreas.value
+    .filter(a => a.type === 'sticker')
+    .reduce((sum, a) => sum + (a.stickerCount || 1), 0)
+})
+
+const tapeCount = computed(() => {
+  return layoutAreas.value
+    .filter(a => a.type === 'tape')
+    .reduce((sum, a) => sum + (a.tapeCount || 1), 0)
+})
+
+const stampCount = computed(() => {
+  return layoutAreas.value
+    .filter(a => a.type === 'stamp')
+    .reduce((sum, a) => sum + (a.stampCount || 1), 0)
 })
 
 const pageFrameStyle = computed(() => {
@@ -181,9 +232,24 @@ const getAreaStyle = (area) => {
   border: 1px solid #91d5ff;
 }
 
+.legend-handwriting {
+  background: #e6f7ff;
+  border: 1px solid #91d5ff;
+}
+
 .legend-sticker {
   background: #fff0f6;
   border: 1px solid #ffadd2;
+}
+
+.legend-tape {
+  background: #fffbe6;
+  border: 1px solid #f5d76e;
+}
+
+.legend-stamp {
+  background: #fce4ec;
+  border: 1px solid #f48fb1;
 }
 
 .legend-image {
@@ -237,9 +303,24 @@ const getAreaStyle = (area) => {
   border: 1px solid #91d5ff;
 }
 
+.area-handwriting {
+  background: #e6f7ff;
+  border: 1px solid #91d5ff;
+}
+
 .area-sticker {
   background: #fff0f6;
   border: 1px solid #ffadd2;
+}
+
+.area-tape {
+  background: #fffbe6;
+  border: 1px solid #f5d76e;
+}
+
+.area-stamp {
+  background: #fce4ec;
+  border: 1px solid #f48fb1;
 }
 
 .area-image {
@@ -312,6 +393,65 @@ const getAreaStyle = (area) => {
 
 .sticker-dot:nth-child(5) {
   background: linear-gradient(135deg, #bdb2ff, #9254de);
+}
+
+.area-handwriting {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.handwriting-text {
+  font-family: 'Georgia', serif;
+  font-size: 13px;
+  font-style: italic;
+  color: #1890ff;
+  transform: rotate(-2deg);
+}
+
+.area-tapes {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+}
+
+.tape-strip {
+  width: 80%;
+  height: 10px;
+  background: linear-gradient(90deg, rgba(255, 215, 0, 0.6), rgba(255, 215, 0, 0.8), rgba(255, 215, 0, 0.6));
+  border-radius: 2px;
+  box-shadow: 0 1px 3px rgba(245, 215, 110, 0.3);
+}
+
+.tape-strip:nth-child(2) {
+  background: linear-gradient(90deg, rgba(255, 182, 193, 0.6), rgba(255, 182, 193, 0.8), rgba(255, 182, 193, 0.6));
+}
+
+.area-stamps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  flex: 1;
+  align-items: center;
+  justify-content: center;
+}
+
+.stamp-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #fff;
+  border: 2px solid #e91e63;
+  color: #e91e63;
+  font-size: 11px;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transform: rotate(-15deg);
 }
 
 .area-image-placeholder {

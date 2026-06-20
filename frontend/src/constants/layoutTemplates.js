@@ -26,9 +26,11 @@ export const layoutTemplates = {
     columnGap: '0',
     padding: '20px',
     areas: [
-      { type: 'text', label: '标题区', columnSpan: 1, rowSpan: 1 },
-      { type: 'sticker', label: '便签区', columnSpan: 1, rowSpan: 1, stickerCount: 3 },
-      { type: 'text', label: '记录区', columnSpan: 1, rowSpan: 2 }
+      { type: 'tape', label: '日期胶带', columnSpan: 1, rowSpan: 1, tapeCount: 1 },
+      { type: 'handwriting', label: '标题手写字', columnSpan: 1, rowSpan: 1 },
+      { type: 'sticker', label: '便签贴纸', columnSpan: 1, rowSpan: 1, stickerCount: 3 },
+      { type: 'text', label: '记录区', columnSpan: 1, rowSpan: 2 },
+      { type: 'stamp', label: '打卡印章', columnSpan: 1, rowSpan: 1, stampCount: 2 }
     ]
   },
 
@@ -37,10 +39,13 @@ export const layoutTemplates = {
     columnGap: '12px',
     padding: '28px',
     areas: [
+      { type: 'tape', label: '顶部装饰胶带', columnSpan: 2, rowSpan: 1, tapeCount: 2 },
       { type: 'sticker', label: '顶部装饰', columnSpan: 2, rowSpan: 1, stickerCount: 5 },
+      { type: 'handwriting', label: '手写字标题', columnSpan: 2, rowSpan: 1 },
       { type: 'text', label: '主内容区', columnSpan: 2, rowSpan: 2 },
       { type: 'image', label: '配图区', columnSpan: 1, rowSpan: 1 },
-      { type: 'sticker', label: '小贴纸', columnSpan: 1, rowSpan: 1, stickerCount: 4 }
+      { type: 'sticker', label: '小贴纸', columnSpan: 1, rowSpan: 1, stickerCount: 4 },
+      { type: 'stamp', label: '装饰印章', columnSpan: 2, rowSpan: 1, stampCount: 3 }
     ]
   },
 
@@ -52,9 +57,12 @@ export const layoutTemplates = {
       { type: 'image', label: '照片1', columnSpan: 1, rowSpan: 1 },
       { type: 'text', label: '文字', columnSpan: 1, rowSpan: 1 },
       { type: 'sticker', label: '票根', columnSpan: 1, rowSpan: 1, stickerCount: 2 },
+      { type: 'tape', label: '胶带装饰', columnSpan: 2, rowSpan: 1, tapeCount: 2 },
       { type: 'text', label: '记录', columnSpan: 2, rowSpan: 1 },
       { type: 'image', label: '照片2', columnSpan: 1, rowSpan: 2 },
-      { type: 'sticker', label: '贴纸', columnSpan: 2, rowSpan: 1, stickerCount: 4 }
+      { type: 'sticker', label: '贴纸', columnSpan: 2, rowSpan: 1, stickerCount: 4 },
+      { type: 'stamp', label: '纪念印章', columnSpan: 1, rowSpan: 1, stampCount: 2 },
+      { type: 'handwriting', label: '手写备注', columnSpan: 2, rowSpan: 1 }
     ]
   },
 
@@ -64,8 +72,10 @@ export const layoutTemplates = {
     padding: '40px',
     areas: [
       { type: 'text', label: '标题', columnSpan: 1, rowSpan: 1 },
+      { type: 'handwriting', label: '手写日期', columnSpan: 1, rowSpan: 1 },
       { type: 'text', label: '正文', columnSpan: 1, rowSpan: 3 },
-      { type: 'sticker', label: '小装饰', columnSpan: 1, rowSpan: 1, stickerCount: 2 }
+      { type: 'sticker', label: '小装饰', columnSpan: 1, rowSpan: 1, stickerCount: 2 },
+      { type: 'stamp', label: '日期印章', columnSpan: 1, rowSpan: 1, stampCount: 1 }
     ]
   },
 
@@ -75,8 +85,11 @@ export const layoutTemplates = {
     padding: '24px',
     areas: [
       { type: 'image', label: '干花区', columnSpan: 1, rowSpan: 2 },
+      { type: 'handwriting', label: '手写字', columnSpan: 1, rowSpan: 1 },
       { type: 'text', label: '主文字', columnSpan: 1, rowSpan: 1 },
-      { type: 'sticker', label: '树叶装饰', columnSpan: 1, rowSpan: 1, stickerCount: 3 }
+      { type: 'sticker', label: '树叶装饰', columnSpan: 1, rowSpan: 1, stickerCount: 3 },
+      { type: 'tape', label: '纸胶带', columnSpan: 2, rowSpan: 1, tapeCount: 2 },
+      { type: 'stamp', label: '植物印章', columnSpan: 1, rowSpan: 1, stampCount: 2 }
     ]
   },
 
@@ -87,8 +100,10 @@ export const layoutTemplates = {
     areas: [
       { type: 'image', label: '大图', columnSpan: 2, rowSpan: 2 },
       { type: 'text', label: '侧栏文字', columnSpan: 1, rowSpan: 2 },
-      { type: 'text', label: '标题', columnSpan: 2, rowSpan: 1 },
-      { type: 'sticker', label: '装饰', columnSpan: 1, rowSpan: 1, stickerCount: 3 }
+      { type: 'handwriting', label: '手写标题', columnSpan: 2, rowSpan: 1 },
+      { type: 'sticker', label: '装饰', columnSpan: 1, rowSpan: 1, stickerCount: 3 },
+      { type: 'tape', label: '侧边胶带', columnSpan: 1, rowSpan: 1, tapeCount: 1 },
+      { type: 'stamp', label: '刊号印章', columnSpan: 2, rowSpan: 1, stampCount: 2 }
     ]
   }
 }
