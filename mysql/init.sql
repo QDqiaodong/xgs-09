@@ -81,6 +81,21 @@ CREATE TABLE work_category (
   INDEX idx_category_id (category_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+DROP TABLE IF EXISTS work_element;
+CREATE TABLE work_element (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  work_id BIGINT NOT NULL,
+  category TINYINT NOT NULL,
+  name VARCHAR(100),
+  description VARCHAR(500),
+  quantity INT DEFAULT 1,
+  position VARCHAR(100),
+  sort INT DEFAULT 0,
+  create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+  INDEX idx_work_id (work_id),
+  INDEX idx_category (category)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 DROP TABLE IF EXISTS favorite;
 CREATE TABLE favorite (
   id BIGINT AUTO_INCREMENT PRIMARY KEY,
