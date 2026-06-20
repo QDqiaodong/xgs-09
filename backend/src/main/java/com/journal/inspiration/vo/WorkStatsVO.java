@@ -19,4 +19,6 @@ public class WorkStatsVO {
     private List<CategoryStatsVO> sceneStats;
 
     private List<StatusStatsVO> statusStats;
+
+    private ColorUsageVO colorUsage;
 }

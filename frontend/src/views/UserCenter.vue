@@ -108,6 +108,10 @@
         </div>
       </div>
 
+      <div class="color-section" v-if="workStats.colorUsage">
+        <ColorUsageProfile :color-usage="workStats.colorUsage" />
+      </div>
+
       <div class="tabs">
         <div 
           class="tab"
@@ -186,6 +190,7 @@ import { ElMessage, ElMessageBox } from 'element-plus'
 import { ArrowDown } from '@element-plus/icons-vue'
 import Header from '@/components/Header.vue'
 import WorkCard from '@/components/WorkCard.vue'
+import ColorUsageProfile from '@/components/ColorUsageProfile.vue'
 import { getUserWorks, updateWorkStatus, getUserWorkStats } from '@/api/work'
 import { getUserFavorites } from '@/api/favorite'
 import { WORK_STATUS, getWorkStatusDesc } from '@/constants/workStatus'
@@ -361,6 +366,10 @@ onMounted(() => {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 20px;
+  margin-bottom: 24px;
+}
+
+.color-section {
   margin-bottom: 24px;
 }
 

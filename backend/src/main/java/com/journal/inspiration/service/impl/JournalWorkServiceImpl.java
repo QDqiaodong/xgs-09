@@ -9,6 +9,7 @@ import com.journal.inspiration.dto.WorkElementDTO;
 import com.journal.inspiration.dto.WorkPublishDTO;
 import com.journal.inspiration.dto.WorkQueryDTO;
 import com.journal.inspiration.dto.WorkUpdateDTO;
+import com.journal.inspiration.common.ColorAnalysisUtil;
 import com.journal.inspiration.common.ColorSchemeValidator;
 import com.journal.inspiration.common.CoverTypeEnum;
 import com.journal.inspiration.common.ElementCategoryEnum;
@@ -19,6 +20,10 @@ import com.journal.inspiration.mapper.*;
 import com.journal.inspiration.service.*;
 import com.journal.inspiration.vo.CategoryStatsVO;
 import com.journal.inspiration.vo.CategoryVO;
+import com.journal.inspiration.vo.ColorCombinationVO;
+import com.journal.inspiration.vo.ColorFamilyStatsVO;
+import com.journal.inspiration.vo.ColorUsageVO;
+import com.journal.inspiration.vo.SingleColorStatsVO;
 import com.journal.inspiration.vo.StatusStatsVO;
 import com.journal.inspiration.vo.WorkElementGroupVO;
 import com.journal.inspiration.vo.WorkElementVO;
@@ -33,8 +38,10 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -631,6 +638,8 @@ public class JournalWorkServiceImpl extends ServiceImpl<JournalWorkMapper, Journ
             }
         }
 
+        stats.setColorUsage(analyzeColorUsage(allWorks));
+
         if (stats.getStyleStats() == null) {
             stats.setStyleStats(new java.util.ArrayList<>());
         }
@@ -639,6 +648,202 @@ public class JournalWorkServiceImpl extends ServiceImpl<JournalWorkMapper, Journ
         }
 
         return stats;
+    }
+
+    private ColorUsageVO analyzeColorUsage(List<JournalWork> allWorks) {
+        ColorUsageVO colorUsage = new ColorUsageVO();
+
+        List<String> allColorSchemes = allWorks.stream()
+                .map(JournalWork::getColorScheme)
+                .filter(cs -> cs != null && !cs.trim().isEmpty())
+                .collect(Collectors.toList());
+
+        colorUsage.setTotalColorSchemes(allColorSchemes.size());
+
+        if (allColorSchemes.isEmpty()) {
+            colorUsage.setFamilyStats(new java.util.ArrayList<>());
+            colorUsage.setTopColors(new java.util.ArrayList<>());
+            colorUsage.setTopCombinations(new java.util.ArrayList<>());
+            return colorUsage;
+        }
+
+        com.fasterxml.jackson.databind.ObjectMapper mapper = new com.fasterxml.jackson.databind.ObjectMapper();
+        List<List<java.util.Map<String, Object>>> allSwatchesList = new ArrayList<>();
+        List<List<String>> allColorCombinations = new ArrayList<>();
+
+        for (String colorScheme : allColorSchemes) {
+            try {
+                java.util.List<java.util.Map<String, Object>> swatches = mapper.readValue(
+                        colorScheme,
+                        new com.fasterxml.jackson.core.type.TypeReference<java.util.List<java.util.Map<String, Object>>>() {}
+                );
+                if (swatches != null && !swatches.isEmpty()) {
+                    allSwatchesList.add(swatches);
+                    List<String> colors = swatches.stream()
+                            .map(s -> s.get("color"))
+                            .filter(Objects::nonNull)
+                            .map(Object::toString)
+                            .filter(c -> c != null && !c.isEmpty())
+                            .collect(Collectors.toList());
+                    if (!colors.isEmpty()) {
+                        allColorCombinations.add(colors);
+                    }
+                }
+            } catch (Exception e) {
+            }
+        }
+
+        colorUsage.setFamilyStats(analyzeFamilyStats(allSwatchesList));
+        colorUsage.setTopColors(analyzeTopColors(allSwatchesList));
+        colorUsage.setTopCombinations(analyzeTopCombinations(allColorCombinations));
+
+        return colorUsage;
+    }
+
+    private List<ColorFamilyStatsVO> analyzeFamilyStats(
+            List<List<java.util.Map<String, Object>>> allSwatchesList) {
+
+        Map<String, Integer> familyCountMap = new LinkedHashMap<>();
+        Map<String, String> familyRepColorMap = new LinkedHashMap<>();
+
+        for (List<java.util.Map<String, Object>> swatches : allSwatchesList) {
+            for (java.util.Map<String, Object> swatch : swatches) {
+                Object colorObj = swatch.get("color");
+                if (colorObj == null) continue;
+                String color = colorObj.toString();
+                ColorAnalysisUtil.ColorFamily family = ColorAnalysisUtil.classifyColor(color);
+                String familyKey = family.getKey();
+                familyCountMap.merge(familyKey, 1, Integer::sum);
+                familyRepColorMap.putIfAbsent(familyKey, family.getRepresentativeColor());
+            }
+        }
+
+        int totalColors = familyCountMap.values().stream().mapToInt(Integer::intValue).sum();
+
+        List<ColorFamilyStatsVO> result = new ArrayList<>();
+        for (Map.Entry<String, Integer> entry : familyCountMap.entrySet()) {
+            String familyKey = entry.getKey();
+            ColorFamilyStatsVO vo = new ColorFamilyStatsVO();
+            ColorAnalysisUtil.ColorFamily family = ColorAnalysisUtil.getAllFamilies().stream()
+                    .filter(f -> f.getKey().equals(familyKey))
+                    .findFirst()
+                    .orElse(null);
+            if (family == null) continue;
+
+            vo.setFamily(familyKey);
+            vo.setFamilyName(family.getName());
+            vo.setRepresentativeColor(familyRepColorMap.get(familyKey));
+            vo.setCount(entry.getValue());
+            vo.setPercentage(totalColors > 0 ? (entry.getValue() * 100.0 / totalColors) : 0);
+            result.add(vo);
+        }
+
+        result.sort((a, b) -> b.getCount() - a.getCount());
+        return result;
+    }
+
+    private List<SingleColorStatsVO> analyzeTopColors(
+            List<List<java.util.Map<String, Object>>> allSwatchesList) {
+
+        Map<String, Integer> colorCountMap = new LinkedHashMap<>();
+        Map<String, String> colorNameMap = new LinkedHashMap<>();
+        Map<String, String> colorUsageTypeMap = new LinkedHashMap<>();
+
+        for (List<java.util.Map<String, Object>> swatches : allSwatchesList) {
+            for (java.util.Map<String, Object> swatch : swatches) {
+                Object colorObj = swatch.get("color");
+                if (colorObj == null) continue;
+                String color = ColorAnalysisUtil.normalizeColor(colorObj.toString());
+                if (color == null) continue;
+
+                boolean foundSimilar = false;
+                for (String existingColor : colorCountMap.keySet()) {
+                    if (ColorAnalysisUtil.areColorsSimilar(color, existingColor, 35)) {
+                        colorCountMap.merge(existingColor, 1, Integer::sum);
+                        foundSimilar = true;
+                        break;
+                    }
+                }
+                if (!foundSimilar) {
+                    colorCountMap.put(color, 1);
+                    Object nameObj = swatch.get("name");
+                    String colorName = nameObj != null ? nameObj.toString() : ColorAnalysisUtil.getColorName(color);
+                    colorNameMap.put(color, colorName);
+                    Object typeObj = swatch.get("type");
+                    if (typeObj == null) {
+                        Object purposeObj = swatch.get("purpose");
+                        String purpose = purposeObj != null ? purposeObj.toString() : "";
+                        if (purpose.contains("主色") || purpose.contains("primary")) {
+                            colorUsageTypeMap.put(color, "主色");
+                        } else if (purpose.contains("辅助") || purpose.contains("secondary")) {
+                            colorUsageTypeMap.put(color, "辅助色");
+                        } else if (purpose.contains("点缀") || purpose.contains("accent")) {
+                            colorUsageTypeMap.put(color, "点缀色");
+                        } else {
+                            colorUsageTypeMap.put(color, "配色");
+                        }
+                    } else {
+                        String type = typeObj.toString();
+                        if ("primary".equals(type)) {
+                            colorUsageTypeMap.put(color, "主色");
+                        } else if ("secondary".equals(type)) {
+                            colorUsageTypeMap.put(color, "辅助色");
+                        } else if ("accent".equals(type)) {
+                            colorUsageTypeMap.put(color, "点缀色");
+                        } else {
+                            colorUsageTypeMap.put(color, "配色");
+                        }
+                    }
+                }
+            }
+        }
+
+        List<Map.Entry<String, Integer>> sortedEntries = new ArrayList<>(colorCountMap.entrySet());
+        sortedEntries.sort((a, b) -> b.getValue() - a.getValue());
+
+        List<SingleColorStatsVO> result = new ArrayList<>();
+        int limit = Math.min(8, sortedEntries.size());
+        for (int i = 0; i < limit; i++) {
+            Map.Entry<String, Integer> entry = sortedEntries.get(i);
+            SingleColorStatsVO vo = new SingleColorStatsVO();
+            vo.setColor(entry.getKey());
+            vo.setName(colorNameMap.get(entry.getKey()));
+            vo.setCount(entry.getValue());
+            vo.setUsageType(colorUsageTypeMap.get(entry.getKey()));
+            result.add(vo);
+        }
+
+        return result;
+    }
+
+    private List<ColorCombinationVO> analyzeTopCombinations(List<List<String>> allColorCombinations) {
+
+        Map<String, ColorCombinationVO> combinationMap = new LinkedHashMap<>();
+
+        for (List<String> colors : allColorCombinations) {
+            if (colors.size() < 2) continue;
+
+            List<String> normalizedColors = ColorAnalysisUtil.generateCombinationKey(colors);
+            if (normalizedColors.size() < 2) continue;
+
+            String key = String.join("|", normalizedColors);
+
+            ColorCombinationVO existing = combinationMap.get(key);
+            if (existing != null) {
+                existing.setCount(existing.getCount() + 1);
+            } else {
+                ColorCombinationVO vo = new ColorCombinationVO();
+                vo.setColors(new ArrayList<>(normalizedColors));
+                vo.setCount(1);
+                vo.setStyleTag(ColorAnalysisUtil.inferStyleTag(normalizedColors));
+                combinationMap.put(key, vo);
+            }
+        }
+
+        List<ColorCombinationVO> result = new ArrayList<>(combinationMap.values());
+        result.sort((a, b) -> b.getCount() - a.getCount());
+
+        return result.stream().limit(5).collect(Collectors.toList());
     }
 
     private WorkVO convertToVO(JournalWork work) {
