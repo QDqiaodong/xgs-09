@@ -92,6 +92,23 @@ CREATE TABLE favorite (
   INDEX idx_work_id (work_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
+DROP TABLE IF EXISTS color_palette;
+CREATE TABLE color_palette (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  name VARCHAR(100) NOT NULL,
+  style_description VARCHAR(500),
+  color_scheme TEXT NOT NULL,
+  cover_color VARCHAR(20),
+  category_ids VARCHAR(255),
+  use_count INT DEFAULT 0,
+  sort INT DEFAULT 0,
+  create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+  update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  deleted TINYINT DEFAULT 0,
+  INDEX idx_sort (sort),
+  INDEX idx_deleted (deleted)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
 SET FOREIGN_KEY_CHECKS = 1;
 
 INSERT INTO sys_user (username, password, nickname, bio) VALUES
@@ -248,3 +265,44 @@ INSERT INTO work_category (work_id, category_id) VALUES
 (6, 2), (6, 5),
 (7, 3), (7, 9),
 (8, 2), (8, 9);
+
+INSERT INTO color_palette (name, style_description, color_scheme, cover_color, category_ids, use_count, sort) VALUES
+('春日樱花粉', '温柔浪漫的春日色调，粉嫩柔美，适合记录春天、少女心事、甜蜜日常',
+ '[{"color":"#FFB6C1","name":"嫩粉色","purpose":"主色调，用于标题和花朵装饰","type":"primary"},{"color":"#90EE90","name":"草绿色","purpose":"辅助色，用于叶子和边框","type":"secondary"},{"color":"#FFFAF0","name":"米白色","purpose":"背景底色，清新自然","type":"secondary"},{"color":"#FF69B4","name":"深粉色","purpose":"点缀色，突出重点内容","type":"accent"}]',
+ '#FFB6C1', '1,3,9', 42, 1),
+
+('简约商务蓝', '冷静专业的蓝灰配色，简洁高效，适合工作计划、读书笔记、项目记录',
+ '[{"color":"#333333","name":"深灰色","purpose":"主色调，用于正文文字","type":"primary"},{"color":"#666666","name":"中灰色","purpose":"辅助色，用于次要信息","type":"secondary"},{"color":"#4A90D9","name":"蓝色","purpose":"强调色，标注重点事项","type":"accent"},{"color":"#F5F5F5","name":"浅灰色","purpose":"背景底色，干净清爽","type":"secondary"}]',
+ '#4A90D9', '2,15', 56, 2),
+
+('糖果生日派', '欢快活泼的糖果色组合，甜蜜梦幻，适合生日派对、节日庆祝、少女风手账',
+ '[{"color":"#FF69B4","name":"粉色","purpose":"主色调，营造甜美氛围","type":"primary"},{"color":"#FFD700","name":"金黄色","purpose":"辅助色，用于礼物和装饰","type":"secondary"},{"color":"#DDA0DD","name":"淡紫色","purpose":"点缀色，增加梦幻感","type":"accent"},{"color":"#FFF0F5","name":"粉白色","purpose":"背景底色，柔和舒适","type":"secondary"},{"color":"#87CEEB","name":"天蓝色","purpose":"点缀色，增加清新感","type":"accent"}]',
+ '#FF69B4', '3,6,10', 38, 3),
+
+('海边旅行蓝', '清新治愈的海边色调，蔚蓝开阔，适合旅行手账、夏日记录、海边回忆',
+ '[{"color":"#4682B4","name":"海蓝色","purpose":"主色调，呼应海边城市","type":"primary"},{"color":"#F5DEB3","name":"浅棕色","purpose":"辅助色，增加复古质感","type":"secondary"},{"color":"#FFFAF0","name":"米白色","purpose":"背景色，清新明亮","type":"secondary"},{"color":"#20B2AA","name":"浅海绿","purpose":"点缀色，增添层次","type":"accent"},{"color":"#FFA07A","name":"浅珊瑚","purpose":"点缀色，夕阳暖色","type":"accent"}]',
+ '#4682B4', '4,11', 45, 4),
+
+('秋日森系棕', '温暖浓郁的秋日色调，自然复古，适合秋天记录、森系手账、复古风格',
+ '[{"color":"#8B4513","name":"深棕色","purpose":"主色调，营造秋日氛围","type":"primary"},{"color":"#FF8C00","name":"橙色","purpose":"辅助色，用于落叶和暖阳","type":"secondary"},{"color":"#DAA520","name":"金黄色","purpose":"点缀色，增加秋意","type":"accent"},{"color":"#F5DEB3","name":"小麦色","purpose":"背景色，温暖柔和","type":"secondary"},{"color":"#556B2F","name":"橄榄绿","purpose":"辅助色，自然元素","type":"secondary"}]',
+ '#8B4513', '4,9', 33, 5),
+
+('盐系极简灰', '清淡克制的盐系配色，简约有质感，适合日常记录、极简风格、随笔手账',
+ '[{"color":"#333333","name":"炭黑色","purpose":"主色调，用于标题和正文","type":"primary"},{"color":"#F5F5DC","name":"米色","purpose":"背景色，温润质感","type":"secondary"},{"color":"#ADD8E6","name":"淡蓝色","purpose":"点缀色，克制的装饰","type":"accent"},{"color":"#A9A9A9","name":"暗灰色","purpose":"辅助色，次要信息","type":"secondary"}]',
+ '#333333', '2,5', 28, 6),
+
+('复古怀旧棕', '浓郁复古的暖棕色调，怀旧文艺，适合复古风、老照片、回忆录手账',
+ '[{"color":"#8B4513","name":"深咖色","purpose":"主色调，奠定复古基调","type":"primary"},{"color":"#D2691E","name":"巧克力色","purpose":"辅助色，层次过渡","type":"secondary"},{"color":"#F4A460","name":"沙棕色","purpose":"辅助色，温暖底色","type":"secondary"},{"color":"#FFFFF0","name":"象牙白","purpose":"背景色，纸张质感","type":"secondary"},{"color":"#B8860B","name":"暗金色","purpose":"点缀色，提亮画面","type":"accent"}]',
+ '#8B4513', '1,9', 31, 7),
+
+('清新薄荷绿', '清爽自然的薄荷绿调，干净治愈，适合春夏记录、健康生活、清新风格',
+ '[{"color":"#98FB98","name":"薄荷绿","purpose":"主色调，清新基调","type":"primary"},{"color":"#20B2AA","name":"浅海绿","purpose":"辅助色，层次丰富","type":"secondary"},{"color":"#F0FFF0","name":"蜜露白","purpose":"背景色，清透干净","type":"secondary"},{"color":"#FFB6C1","name":"浅粉色","purpose":"点缀色，增添柔美","type":"accent"},{"color":"#FFD700","name":"浅黄色","purpose":"点缀色，阳光感","type":"accent"}]',
+ '#98FB98', '4,5', 26, 8),
+
+('梦幻紫霞仙', '浪漫神秘的紫色调，梦幻唯美，适合少女心事、梦境记录、奇幻风格',
+ '[{"color":"#9370DB","name":"中紫色","purpose":"主色调，梦幻基调","type":"primary"},{"color":"#DDA0DD","name":"梅红色","purpose":"辅助色，柔和过渡","type":"secondary"},{"color":"#E6E6FA","name":"薰衣草色","purpose":"背景色，温柔浪漫","type":"secondary"},{"color":"#FF69B4","name":"热粉色","purpose":"点缀色，甜美提亮","type":"accent"},{"color":"#FFD700","name":"星光金","purpose":"点缀色，星光闪耀","type":"accent"}]',
+ '#9370DB', '3,6', 29, 9),
+
+('温暖圣诞红', '喜庆热烈的圣诞配色，温馨热闹，适合节日手账、冬季记录、庆祝主题',
+ '[{"color":"#B22222","name":"圣诞红","purpose":"主色调，节日氛围","type":"primary"},{"color":"#228B22","name":"森林绿","purpose":"辅助色，经典搭配","type":"secondary"},{"color":"#FFD700","name":"金色","purpose":"点缀色，华丽装饰","type":"accent"},{"color":"#FFFAF0","name":"米白色","purpose":"背景色，干净温暖","type":"secondary"},{"color":"#8B4513","name":"深棕色","purpose":"松果等元素","type":"secondary"}]',
+ '#B22222', '7,10', 22, 10);

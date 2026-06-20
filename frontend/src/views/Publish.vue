@@ -116,6 +116,57 @@
           </div>
           <div class="section-body">
             <el-form-item label="配色方案">
+              <div class="color-palette-selector">
+                <div class="palette-selector-header">
+                  <div class="selector-title-wrap">
+                    <span class="selector-title">🎨 色彩灵感卡组</span>
+                    <span class="selector-desc">选择一套预设配色，一键应用到你的手账</span>
+                  </div>
+                  <button
+                    v-if="selectedPaletteId"
+                    class="clear-palette-btn"
+                    @click="clearPaletteSelection"
+                  >
+                    <el-icon><Close /></el-icon>
+                    清除选择
+                  </button>
+                </div>
+                <div class="palette-list">
+                  <div
+                    v-for="palette in colorPaletteList"
+                    :key="palette.id"
+                    class="palette-card"
+                    :class="{ active: selectedPaletteId === palette.id, recommended: isPaletteRecommended(palette) }"
+                    @click="selectColorPalette(palette)"
+                  >
+                    <div class="palette-preview">
+                      <div
+                        v-for="(swatch, i) in getPalettePreviewColors(palette)"
+                        :key="i"
+                        class="preview-swatch"
+                        :style="{ background: swatch.color, flex: swatch.type === 'primary' ? 2 : 1 }"
+                      ></div>
+                    </div>
+                    <div class="palette-info">
+                      <div class="palette-name-row">
+                        <span class="palette-name">{{ palette.name }}</span>
+                        <span v-if="isPaletteRecommended(palette)" class="recommend-tag">推荐</span>
+                      </div>
+                      <div class="palette-desc">{{ palette.styleDescription }}</div>
+                      <div class="palette-meta">
+                        <span class="use-count">{{ palette.useCount || 0 }} 人使用</span>
+                      </div>
+                    </div>
+                    <div class="palette-check" v-if="selectedPaletteId === palette.id">
+                      <el-icon><Check /></el-icon>
+                    </div>
+                  </div>
+                </div>
+                <div class="selected-palette-tip" v-if="selectedPaletteId">
+                  <el-icon class="tip-icon"><InfoFilled /></el-icon>
+                  <span>已选择配色卡组，点击可查看详情，下方颜色可继续微调</span>
+                </div>
+              </div>
               <div class="color-scheme-editor">
                 <div class="color-type-section primary">
                   <div class="color-type-header">
@@ -373,6 +424,7 @@ import Header from '@/components/Header.vue'
 import LayoutGridPreviewer from '@/components/LayoutGridPreviewer.vue'
 import { publishWork } from '@/api/work'
 import { getCategoryList } from '@/api/category'
+import { getColorPaletteList, useColorPalette } from '@/api/colorPalette'
 import { COVER_TYPE_LIST, DEFAULT_COVER_TYPE, getCoverTypeByCode } from '@/constants/coverTypes'
 import { getDefaultLayout } from '@/constants/layoutTemplates'
 
@@ -382,6 +434,9 @@ const submitting = ref(false)
 const styleCategories = ref([])
 const sceneCategories = ref([])
 const coverTypeList = COVER_TYPE_LIST
+const colorPaletteList = ref([])
+const selectedPaletteId = ref(null)
+const selectedPalette = ref(null)
 
 const MAX_PRIMARY = 2
 const MAX_SECONDARY = 4
@@ -559,6 +614,15 @@ const selectCoverType = (code) => {
   form.coverType = code
 }
 
+const loadColorPalettes = async () => {
+  try {
+    const res = await getColorPaletteList(form.categoryIds)
+    colorPaletteList.value = res.data || []
+  } catch (e) {
+    console.error('加载色彩灵感卡组失败', e)
+  }
+}
+
 const loadCategories = async () => {
   const [styleRes, sceneRes] = await Promise.all([
     getCategoryList('style'),
@@ -566,6 +630,95 @@ const loadCategories = async () => {
   ])
   styleCategories.value = styleRes.data || []
   sceneCategories.value = sceneRes.data || []
+  loadColorPalettes()
+}
+
+watch(
+  () => form.categoryIds,
+  () => {
+    loadColorPalettes()
+  },
+  { deep: true }
+)
+
+const getPalettePreviewColors = (palette) => {
+  try {
+    const colors = JSON.parse(palette.colorScheme)
+    return colors.slice(0, 5)
+  } catch (e) {
+    return []
+  }
+}
+
+const isPaletteRecommended = (palette) => {
+  if (!palette.categoryIdList || palette.categoryIdList.length === 0 || form.categoryIds.length === 0) {
+    return false
+  }
+  return palette.categoryIdList.some(id => form.categoryIds.includes(id))
+}
+
+const selectColorPalette = async (palette) => {
+  if (selectedPaletteId.value === palette.id) {
+    return
+  }
+  selectedPaletteId.value = palette.id
+  selectedPalette.value = palette
+
+  try {
+    await useColorPalette(palette.id)
+  } catch (e) {
+    console.error('记录使用次数失败', e)
+  }
+
+  try {
+    const swatches = JSON.parse(palette.colorScheme)
+    primarySwatches.value = []
+    secondarySwatches.value = []
+    accentSwatches.value = []
+
+    for (const swatch of swatches) {
+      const newSwatch = {
+        color: swatch.color,
+        name: swatch.name || '',
+        purpose: swatch.purpose || '',
+        type: swatch.type
+      }
+      if (swatch.type === 'primary') {
+        if (primarySwatches.value.length < MAX_PRIMARY) {
+          primarySwatches.value.push(newSwatch)
+        }
+      } else if (swatch.type === 'secondary') {
+        if (secondarySwatches.value.length < MAX_SECONDARY) {
+          secondarySwatches.value.push(newSwatch)
+        }
+      } else if (swatch.type === 'accent') {
+        if (accentSwatches.value.length < MAX_ACCENT) {
+          accentSwatches.value.push(newSwatch)
+        }
+      } else {
+        if (secondarySwatches.value.length < MAX_SECONDARY) {
+          secondarySwatches.value.push({ ...newSwatch, type: 'secondary' })
+        }
+      }
+    }
+
+    if (primarySwatches.value.length === 0) {
+      primarySwatches.value.push({ color: '#FFB6C1', name: '主色', purpose: '主色调', type: 'primary' })
+    }
+    if (secondarySwatches.value.length === 0) {
+      secondarySwatches.value.push({ color: '#98D8C8', name: '辅助色', purpose: '辅助色', type: 'secondary' })
+    }
+
+    ElMessage.success(`已应用「${palette.name}」配色方案`)
+  } catch (e) {
+    console.error('应用配色方案失败', e)
+    ElMessage.error('应用配色方案失败')
+  }
+}
+
+const clearPaletteSelection = () => {
+  selectedPaletteId.value = null
+  selectedPalette.value = null
 }
 
 const toggleCategory = (id) => {
@@ -1127,6 +1280,210 @@ onMounted(() => {
   color: #e6a23c;
 }
 
+.color-palette-selector {
+  margin-bottom: 24px;
+  padding: 20px;
+  background: linear-gradient(135deg, #fdfbff 0%, #fff5f8 100%);
+  border-radius: 12px;
+  border: 1px solid #f0e6fa;
+}
+
+.palette-selector-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.selector-title-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.selector-title {
+  font-size: 16px;
+  font-weight: 700;
+  color: #333;
+}
+
+.selector-desc {
+  font-size: 13px;
+  color: #999;
+}
+
+.clear-palette-btn {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 6px 14px;
+  border: 1px solid #ffccd5;
+  border-radius: 16px;
+  background: #fff;
+  color: #ff6b9d;
+  font-size: 13px;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.clear-palette-btn:hover {
+  background: #fff5f8;
+  border-color: #ff9a9e;
+}
+
+.palette-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 14px;
+}
+
+.palette-card {
+  position: relative;
+  background: #fff;
+  border: 2px solid #eee;
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.palette-card:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.08);
+  border-color: #ffc8dd;
+}
+
+.palette-card.active {
+  border-color: #ff6b9d;
+  background: linear-gradient(135deg, #fff5f8 0%, #ffe8f0 100%);
+  box-shadow: 0 4px 16px rgba(255, 107, 157, 0.15);
+}
+
+.palette-card.recommended {
+  border-color: #ffd93d;
+}
+
+.palette-card.recommended::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  width: 0;
+  height: 0;
+  border-style: solid;
+  border-width: 0 36px 36px 0;
+  border-color: transparent #ffd93d transparent transparent;
+  z-index: 1;
+}
+
+.palette-card.recommended::after {
+  content: '✨';
+  position: absolute;
+  top: 4px;
+  right: 6px;
+  font-size: 12px;
+  z-index: 2;
+}
+
+.palette-preview {
+  display: flex;
+  height: 52px;
+  overflow: hidden;
+}
+
+.preview-swatch {
+  transition: flex 0.3s;
+}
+
+.palette-card:hover .preview-swatch {
+  flex: 1 !important;
+}
+
+.palette-info {
+  padding: 14px;
+}
+
+.palette-name-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.palette-name {
+  font-size: 15px;
+  font-weight: 700;
+  color: #333;
+}
+
+.recommend-tag {
+  padding: 2px 8px;
+  background: linear-gradient(135deg, #ffd93d 0%, #ffb347 100%);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 8px;
+}
+
+.palette-desc {
+  font-size: 12px;
+  color: #888;
+  line-height: 1.5;
+  margin-bottom: 8px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.palette-meta {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.use-count {
+  font-size: 12px;
+  color: #aaa;
+}
+
+.palette-check {
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  width: 26px;
+  height: 26px;
+  background: #ff6b9d;
+  color: #fff;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  box-shadow: 0 2px 8px rgba(255, 107, 157, 0.3);
+  z-index: 2;
+}
+
+.selected-palette-tip {
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  margin-top: 16px;
+  padding: 12px 16px;
+  background: #ecf5ff;
+  border-radius: 8px;
+  color: #409eff;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.selected-palette-tip .tip-icon {
+  flex-shrink: 0;
+  font-size: 18px;
+  margin-top: 1px;
+}
+
 @media (max-width: 600px) {
   .section-header {
     padding: 20px 20px;
@@ -1166,6 +1523,20 @@ onMounted(() => {
 
   .publish-content {
     padding: 20px 12px 40px;
+  }
+
+  .palette-list {
+    grid-template-columns: 1fr;
+  }
+
+  .color-palette-selector {
+    padding: 14px;
+  }
+
+  .palette-selector-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
   }
 }
 </style>

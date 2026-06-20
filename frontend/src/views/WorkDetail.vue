@@ -149,6 +149,36 @@
             />
             <div v-if="!hasValidSwatches" class="section-content">{{ work.colorScheme }}</div>
           </div>
+
+          <div class="related-palette-section" v-if="relatedColorPalettes.length > 0">
+            <div class="section-header">
+              <el-icon class="section-icon"><Brush /></el-icon>
+              <h3 class="section-title">相似色彩灵感</h3>
+            </div>
+            <p class="section-desc">探索更多配色方案，找到属于你的色彩灵感</p>
+            <div class="related-palette-list" v-loading="loadingPalettes">
+              <div
+                v-for="palette in relatedColorPalettes.slice(0, 4)"
+                :key="palette.id"
+                class="related-palette-card"
+                @click="handleUsePalette(palette)"
+              >
+                <div class="related-preview">
+                  <div
+                    v-for="(swatch, i) in getRelatedPaletteColors(palette)"
+                    :key="i"
+                    class="related-swatch"
+                    :style="{ background: swatch.color, flex: swatch.type === 'primary' ? 2 : 1 }"
+                  ></div>
+                </div>
+                <div class="related-info">
+                  <span class="related-name">{{ palette.name }}</span>
+                  <span class="related-desc">{{ palette.styleDescription }}</span>
+                  <span class="related-count">{{ palette.useCount || 0 }} 人使用</span>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </template>
     </main>
@@ -165,6 +195,7 @@ import LayoutGridPreviewer from '@/components/LayoutGridPreviewer.vue'
 import ColorPaletteWall from '@/components/ColorPaletteWall.vue'
 import { getWorkDetail } from '@/api/work'
 import { toggleFavorite } from '@/api/favorite'
+import { getColorPaletteList, useColorPalette } from '@/api/colorPalette'
 import { getDefaultLayout } from '@/constants/layoutTemplates'
 import { getCoverTypeByCode } from '@/constants/coverTypes'
 import { getStyleConfig } from '@/constants/styleTagConfig'
@@ -180,6 +211,8 @@ const errorTitle = ref('')
 const errorSubtitle = ref('')
 const isNotFoundError = ref(false)
 const defaultImage = 'https://images.unsplash.com/photo-1506905925346-21bda4d32df4?w=800&h=500&fit=crop'
+const relatedColorPalettes = ref([])
+const loadingPalettes = ref(false)
 
 const getStyleTagStyle = (name) => {
   const config = getStyleConfig(name)
@@ -260,6 +293,49 @@ const materialList = computed(() => {
   return list
 })
 
+const loadRelatedPalettes = async () => {
+  if (!work.value || !work.value.categories) {
+    relatedColorPalettes.value = []
+    return
+  }
+  loadingPalettes.value = true
+  try {
+    const categoryIds = work.value.categories.map(c => c.id)
+    const res = await getColorPaletteList(categoryIds)
+    relatedColorPalettes.value = (res.data || []).filter(p => {
+      try {
+        const colors = JSON.parse(p.colorScheme)
+        return Array.isArray(colors) && colors.length > 0
+      } catch (e) {
+        return false
+      }
+    }).slice(0, 6)
+  } catch (e) {
+    console.error('加载相关色彩灵感卡组失败', e)
+    relatedColorPalettes.value = []
+  } finally {
+    loadingPalettes.value = false
+  }
+}
+
+const getRelatedPaletteColors = (palette) => {
+  try {
+    const colors = JSON.parse(palette.colorScheme)
+    return colors.slice(0, 5)
+  } catch (e) {
+    return []
+  }
+}
+
+const handleUsePalette = async (palette) => {
+  try {
+    await useColorPalette(palette.id)
+    ElMessage.success(`已为「${palette.name}」贡献热度，去发布页试试这套配色吧！`)
+  } catch (e) {
+    console.error('记录使用次数失败', e)
+  }
+}
+
 const loadDetail = async () => {
   loading.value = true
   work.value = null
@@ -269,6 +345,7 @@ const loadDetail = async () => {
     const res = await getWorkDetail(route.params.id, 1)
     work.value = res.data
     isFavorite.value = res.data?.isFavorite || false
+    await loadRelatedPalettes()
   } catch (e) {
     error.value = e
     if (e.code === 404 || (e.message && e.message === '作品不存在')) {
@@ -673,5 +750,104 @@ watch(
   background: rgba(255, 255, 255, 0.7);
   border-radius: 8px;
   color: #555;
+}
+
+.related-palette-section {
+  margin-bottom: 32px;
+  padding: 24px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #fdfbff 0%, #fff5f8 100%);
+  border-left: 4px solid #9370db;
+}
+
+.related-palette-section .section-icon {
+  color: #9370db;
+}
+
+.related-palette-section .section-title {
+  margin-bottom: 0;
+  border-left: none;
+  padding-left: 0;
+  color: #6a0dad;
+}
+
+.related-palette-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 14px;
+}
+
+.related-palette-card {
+  background: #fff;
+  border: 2px solid #eee;
+  border-radius: 12px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.related-palette-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 8px 24px rgba(147, 112, 219, 0.15);
+  border-color: #dda0dd;
+}
+
+.related-preview {
+  display: flex;
+  height: 48px;
+  overflow: hidden;
+}
+
+.related-swatch {
+  transition: flex 0.3s;
+}
+
+.related-palette-card:hover .related-swatch {
+  flex: 1 !important;
+}
+
+.related-info {
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.related-name {
+  font-size: 14px;
+  font-weight: 700;
+  color: #333;
+}
+
+.related-desc {
+  font-size: 12px;
+  color: #888;
+  line-height: 1.5;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.related-count {
+  font-size: 11px;
+  color: #aaa;
+  margin-top: 2px;
+}
+
+@media (max-width: 600px) {
+  .related-palette-list {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+
+  .related-palette-section {
+    padding: 18px;
+  }
+
+  .related-info {
+    padding: 10px 12px;
+  }
 }
 </style>
