@@ -7,6 +7,7 @@ import com.journal.inspiration.dto.WorkPublishDTO;
 import com.journal.inspiration.dto.WorkQueryDTO;
 import com.journal.inspiration.dto.WorkUpdateDTO;
 import com.journal.inspiration.service.JournalWorkService;
+import com.journal.inspiration.vo.UserStyleProfileVO;
 import com.journal.inspiration.vo.WorkStatsVO;
 import com.journal.inspiration.vo.WorkVO;
 import jakarta.validation.Valid;
@@ -91,5 +92,15 @@ public class JournalWorkController {
     @GetMapping("/user/{userId}/stats")
     public Result<WorkStatsVO> userWorkStats(@PathVariable Long userId) {
         return Result.success(workService.getUserWorkStats(userId));
+    }
+
+    @GetMapping("/user/{userId}/style-profile")
+    public Result<UserStyleProfileVO> userStyleProfile(@PathVariable Long userId) {
+        try {
+            UserStyleProfileVO profile = workService.getUserStyleProfile(userId);
+            return Result.success(profile);
+        } catch (IllegalArgumentException e) {
+            return Result.error(404, e.getMessage());
+        }
     }
 }

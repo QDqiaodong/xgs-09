@@ -7,7 +7,19 @@
         <div class="user-info">
           <img class="avatar" src="https://api.dicebear.com/7.x/avataaars/svg?seed=journal" alt="" />
           <div class="info-text">
-            <h2 class="username">手账爱好者</h2>
+            <div class="name-row">
+              <h2 class="username">手账爱好者</h2>
+              <el-button 
+                type="primary" 
+                size="small" 
+                text
+                class="style-link"
+                @click="goToStyleProfile"
+              >
+                <el-icon><Brush /></el-icon>
+                查看排版风格
+              </el-button>
+            </div>
             <p class="bio">热爱生活，记录每一个美好瞬间 ✨</p>
           </div>
         </div>
@@ -187,7 +199,7 @@
 import { ref, onMounted, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { ElMessage, ElMessageBox } from 'element-plus'
-import { ArrowDown } from '@element-plus/icons-vue'
+import { ArrowDown, Brush } from '@element-plus/icons-vue'
 import Header from '@/components/Header.vue'
 import WorkCard from '@/components/WorkCard.vue'
 import ColorUsageProfile from '@/components/ColorUsageProfile.vue'
@@ -295,6 +307,10 @@ const editWork = (work) => {
   ElMessage.info('编辑功能开发中...')
 }
 
+const goToStyleProfile = () => {
+  router.push(`/user/${userId.value}/style`)
+}
+
 onMounted(() => {
   loadAllData()
 })
@@ -329,11 +345,22 @@ onMounted(() => {
   border: 4px solid #f0f0f0;
 }
 
+.name-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 6px;
+}
+
 .username {
   font-size: 22px;
   font-weight: 600;
   color: #333;
-  margin-bottom: 6px;
+  margin: 0;
+}
+
+.style-link {
+  font-size: 13px;
 }
 
 .bio {

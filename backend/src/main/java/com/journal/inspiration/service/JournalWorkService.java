@@ -6,6 +6,7 @@ import com.journal.inspiration.dto.WorkPublishDTO;
 import com.journal.inspiration.dto.WorkQueryDTO;
 import com.journal.inspiration.dto.WorkUpdateDTO;
 import com.journal.inspiration.entity.JournalWork;
+import com.journal.inspiration.vo.UserStyleProfileVO;
 import com.journal.inspiration.vo.WorkStatsVO;
 import com.journal.inspiration.vo.WorkVO;
 
@@ -30,4 +31,6 @@ public interface JournalWorkService extends IService<JournalWork> {
     boolean incrementViewCount(Long id);
 
     WorkStatsVO getUserWorkStats(Long userId);
+
+    UserStyleProfileVO getUserStyleProfile(Long userId);
 }

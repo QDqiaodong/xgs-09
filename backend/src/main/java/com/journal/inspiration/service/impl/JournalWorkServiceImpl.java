@@ -13,6 +13,7 @@ import com.journal.inspiration.common.ColorAnalysisUtil;
 import com.journal.inspiration.common.ColorSchemeValidator;
 import com.journal.inspiration.common.CoverTypeEnum;
 import com.journal.inspiration.common.ElementCategoryEnum;
+import com.journal.inspiration.common.LayoutConfigValidator;
 import com.journal.inspiration.common.LayoutTemplateConfig;
 import com.journal.inspiration.common.WorkStatusEnum;
 import com.journal.inspiration.entity.*;
@@ -24,7 +25,11 @@ import com.journal.inspiration.vo.ColorCombinationVO;
 import com.journal.inspiration.vo.ColorFamilyStatsVO;
 import com.journal.inspiration.vo.ColorUsageVO;
 import com.journal.inspiration.vo.SingleColorStatsVO;
+import com.journal.inspiration.vo.ScenePreferenceVO;
 import com.journal.inspiration.vo.StatusStatsVO;
+import com.journal.inspiration.vo.StylePreferenceVO;
+import com.journal.inspiration.vo.UserStyleProfileVO;
+import com.journal.inspiration.vo.WorkCoverVO;
 import com.journal.inspiration.vo.WorkElementGroupVO;
 import com.journal.inspiration.vo.WorkElementVO;
 import com.journal.inspiration.vo.WorkStatsVO;
@@ -89,7 +94,13 @@ public class JournalWorkServiceImpl extends ServiceImpl<JournalWorkMapper, Journ
             throw new IllegalArgumentException(colorValidation.getMessage());
         }
 
+        LayoutConfigValidator.ValidationResult layoutValidation = LayoutConfigValidator.validate(dto.getLayoutConfig());
+        if (!layoutValidation.isValid()) {
+            throw new IllegalArgumentException(layoutValidation.getMessage());
+        }
+
         String normalizedColorScheme = ColorSchemeValidator.normalize(dto.getColorScheme());
+        String normalizedLayoutConfig = LayoutConfigValidator.normalize(dto.getLayoutConfig());
 
         JournalWork work = new JournalWork();
         BeanUtil.copyProperties(dto, work);
@@ -98,7 +109,9 @@ public class JournalWorkServiceImpl extends ServiceImpl<JournalWorkMapper, Journ
             work.setCoverType(CoverTypeEnum.getDefault().getCode());
         }
 
-        if (work.getLayoutConfig() == null || work.getLayoutConfig().trim().isEmpty()) {
+        if (normalizedLayoutConfig != null && !normalizedLayoutConfig.trim().isEmpty()) {
+            work.setLayoutConfig(normalizedLayoutConfig);
+        } else if (work.getLayoutConfig() == null || work.getLayoutConfig().trim().isEmpty()) {
             String defaultLayoutJson = LayoutTemplateConfig.getDefaultLayoutJson(categories);
             if (defaultLayoutJson != null) {
                 work.setLayoutConfig(defaultLayoutJson);
@@ -181,6 +194,15 @@ public class JournalWorkServiceImpl extends ServiceImpl<JournalWorkMapper, Journ
             normalizedColorScheme = ColorSchemeValidator.normalize(dto.getColorScheme());
         }
 
+        String normalizedLayoutConfig = null;
+        if (dto.getLayoutConfig() != null) {
+            LayoutConfigValidator.ValidationResult layoutValidation = LayoutConfigValidator.validate(dto.getLayoutConfig());
+            if (!layoutValidation.isValid()) {
+                throw new IllegalArgumentException(layoutValidation.getMessage());
+            }
+            normalizedLayoutConfig = LayoutConfigValidator.normalize(dto.getLayoutConfig());
+        }
+
         boolean coverChanged = false;
         String oldCoverImage = existWork.getCoverImage();
         if (dto.getCoverImage() != null && !dto.getCoverImage().equals(oldCoverImage)) {
@@ -209,7 +231,9 @@ public class JournalWorkServiceImpl extends ServiceImpl<JournalWorkMapper, Journ
             work.setLayoutIdea(dto.getLayoutIdea());
         }
         if (dto.getLayoutConfig() != null) {
-            if (dto.getLayoutConfig().trim().isEmpty()) {
+            if (normalizedLayoutConfig != null && !normalizedLayoutConfig.trim().isEmpty()) {
+                work.setLayoutConfig(normalizedLayoutConfig);
+            } else if (dto.getLayoutConfig().trim().isEmpty()) {
                 String defaultLayoutJson = LayoutTemplateConfig.getDefaultLayoutJson(categories);
                 if (defaultLayoutJson != null) {
                     work.setLayoutConfig(defaultLayoutJson);
@@ -1000,5 +1024,206 @@ public class JournalWorkServiceImpl extends ServiceImpl<JournalWorkMapper, Journ
             return ColorSchemeValidator.TYPE_SECONDARY;
         }
         return null;
+    }
+
+    @Override
+    public UserStyleProfileVO getUserStyleProfile(Long userId) {
+        User user = userMapper.selectById(userId);
+        if (user == null) {
+            throw new IllegalArgumentException("用户不存在");
+        }
+
+        LambdaQueryWrapper<JournalWork> workWrapper = new LambdaQueryWrapper<>();
+        workWrapper.eq(JournalWork::getUserId, userId);
+        workWrapper.eq(JournalWork::getStatus, WorkStatusEnum.PUBLIC.getCode());
+        workWrapper.orderByDesc(JournalWork::getFavoriteCount, JournalWork::getViewCount, JournalWork::getCreateTime);
+        List<JournalWork> allPublicWorks = list(workWrapper);
+
+        UserStyleProfileVO profile = new UserStyleProfileVO();
+        profile.setUserId(userId);
+        profile.setNickname(user.getNickname());
+        profile.setAvatar(user.getAvatar());
+        profile.setBio(user.getBio());
+        profile.setTotalWorks((int) count(new LambdaQueryWrapper<JournalWork>().eq(JournalWork::getUserId, userId)));
+        profile.setTotalPublicWorks(allPublicWorks.size());
+
+        if (allPublicWorks.isEmpty()) {
+            profile.setStylePreferences(new ArrayList<>());
+            profile.setScenePreferences(new ArrayList<>());
+            profile.setFeaturedWorks(new ArrayList<>());
+            return profile;
+        }
+
+        List<Long> workIds = allPublicWorks.stream()
+                .map(JournalWork::getId)
+                .collect(Collectors.toList());
+
+        List<WorkCategory> workCategories = workCategoryMapper.selectList(
+                new LambdaQueryWrapper<WorkCategory>().in(WorkCategory::getWorkId, workIds)
+        );
+
+        Map<Long, List<Long>> workToCategoryIdsMap = new java.util.HashMap<>();
+        Map<Long, List<Long>> categoryToWorkIdsMap = new java.util.HashMap<>();
+        for (WorkCategory wc : workCategories) {
+            workToCategoryIdsMap.computeIfAbsent(wc.getWorkId(), k -> new ArrayList<>()).add(wc.getCategoryId());
+            categoryToWorkIdsMap.computeIfAbsent(wc.getCategoryId(), k -> new ArrayList<>()).add(wc.getWorkId());
+        }
+
+        Set<Long> allCategoryIds = new java.util.HashSet<>(categoryToWorkIdsMap.keySet());
+        List<Category> allCategories = categoryMapper.selectBatchIds(new ArrayList<>(allCategoryIds));
+        Map<Long, Category> categoryMap = allCategories.stream()
+                .collect(Collectors.toMap(Category::getId, c -> c));
+
+        Map<Long, JournalWork> workMap = allPublicWorks.stream()
+                .collect(Collectors.toMap(JournalWork::getId, w -> w));
+
+        List<StylePreferenceVO> stylePreferences = buildStylePreferences(
+                allCategories, categoryToWorkIdsMap, workMap, allPublicWorks.size()
+        );
+        List<ScenePreferenceVO> scenePreferences = buildScenePreferences(
+                allCategories, categoryToWorkIdsMap, workMap, allPublicWorks.size()
+        );
+
+        profile.setStylePreferences(stylePreferences);
+        profile.setScenePreferences(scenePreferences);
+
+        ColorUsageVO colorTendency = analyzeColorUsage(allPublicWorks);
+        profile.setColorTendency(colorTendency);
+
+        List<WorkCoverVO> featuredWorks = buildFeaturedWorks(allPublicWorks);
+        profile.setFeaturedWorks(featuredWorks);
+
+        if (!stylePreferences.isEmpty()) {
+            profile.setSignatureStyle(stylePreferences.get(0).getName());
+        }
+
+        if (colorTendency != null && colorTendency.getTopColors() != null && !colorTendency.getTopColors().isEmpty()) {
+            profile.setDominantColor(colorTendency.getTopColors().get(0).getColor());
+        }
+
+        return profile;
+    }
+
+    private List<StylePreferenceVO> buildStylePreferences(
+            List<Category> allCategories,
+            Map<Long, List<Long>> categoryToWorkIdsMap,
+            Map<Long, JournalWork> workMap,
+            int totalWorks
+    ) {
+        List<StylePreferenceVO> result = new ArrayList<>();
+        List<Category> styleCategories = allCategories.stream()
+                .filter(c -> "style".equals(c.getType()))
+                .collect(Collectors.toList());
+
+        for (Category category : styleCategories) {
+            List<Long> workIds = categoryToWorkIdsMap.getOrDefault(category.getId(), new ArrayList<>());
+            if (workIds.isEmpty()) continue;
+
+            StylePreferenceVO vo = new StylePreferenceVO();
+            vo.setCategoryId(category.getId());
+            vo.setName(category.getName());
+            vo.setType(category.getType());
+            vo.setCount(workIds.size());
+            vo.setTotalWorks(totalWorks);
+            vo.setPercentage(totalWorks > 0 ? (workIds.size() * 100.0 / totalWorks) : 0);
+            vo.setIcon(category.getIcon());
+            vo.setDescription(null);
+            vo.setBannerColor(null);
+
+            List<WorkCoverVO> representativeWorks = buildRepresentativeWorks(workIds, workMap, 3);
+            vo.setRepresentativeWorks(representativeWorks);
+
+            result.add(vo);
+        }
+
+        result.sort((a, b) -> b.getCount() - a.getCount());
+        return result.stream().limit(5).collect(Collectors.toList());
+    }
+
+    private List<ScenePreferenceVO> buildScenePreferences(
+            List<Category> allCategories,
+            Map<Long, List<Long>> categoryToWorkIdsMap,
+            Map<Long, JournalWork> workMap,
+            int totalWorks
+    ) {
+        List<ScenePreferenceVO> result = new ArrayList<>();
+        List<Category> sceneCategories = allCategories.stream()
+                .filter(c -> "scene".equals(c.getType()))
+                .collect(Collectors.toList());
+
+        for (Category category : sceneCategories) {
+            List<Long> workIds = categoryToWorkIdsMap.getOrDefault(category.getId(), new ArrayList<>());
+            if (workIds.isEmpty()) continue;
+
+            ScenePreferenceVO vo = new ScenePreferenceVO();
+            vo.setCategoryId(category.getId());
+            vo.setName(category.getName());
+            vo.setType(category.getType());
+            vo.setCount(workIds.size());
+            vo.setTotalWorks(totalWorks);
+            vo.setPercentage(totalWorks > 0 ? (workIds.size() * 100.0 / totalWorks) : 0);
+            vo.setIcon(category.getIcon());
+            vo.setDescription(null);
+            vo.setBannerColor(null);
+
+            List<WorkCoverVO> representativeWorks = buildRepresentativeWorks(workIds, workMap, 3);
+            vo.setRepresentativeWorks(representativeWorks);
+
+            result.add(vo);
+        }
+
+        result.sort((a, b) -> b.getCount() - a.getCount());
+        return result.stream().limit(5).collect(Collectors.toList());
+    }
+
+    private List<WorkCoverVO> buildRepresentativeWorks(
+            List<Long> workIds,
+            Map<Long, JournalWork> workMap,
+            int limit
+    ) {
+        List<JournalWork> works = workIds.stream()
+                .map(workMap::get)
+                .filter(Objects::nonNull)
+                .sorted(Comparator.comparingInt((JournalWork w) -> w.getFavoriteCount() == null ? 0 : w.getFavoriteCount())
+                        .thenComparingInt(w -> w.getViewCount() == null ? 0 : w.getViewCount())
+                        .reversed())
+                .limit(limit)
+                .collect(Collectors.toList());
+
+        return works.stream()
+                .map(this::convertToWorkCoverVO)
+                .collect(Collectors.toList());
+    }
+
+    private List<WorkCoverVO> buildFeaturedWorks(List<JournalWork> allWorks) {
+        return allWorks.stream()
+                .sorted(Comparator.comparingInt((JournalWork w) -> w.getFavoriteCount() == null ? 0 : w.getFavoriteCount())
+                        .thenComparingInt(w -> w.getViewCount() == null ? 0 : w.getViewCount())
+                        .reversed())
+                .limit(6)
+                .map(this::convertToWorkCoverVO)
+                .collect(Collectors.toList());
+    }
+
+    private WorkCoverVO convertToWorkCoverVO(JournalWork work) {
+        WorkCoverVO vo = new WorkCoverVO();
+        vo.setWorkId(work.getId());
+        vo.setTitle(work.getTitle());
+        vo.setCoverImage(work.getCoverImage());
+        vo.setViewCount(work.getViewCount());
+        vo.setFavoriteCount(work.getFavoriteCount());
+        vo.setCreateTime(work.getCreateTime());
+
+        CoverTypeEnum coverType = CoverTypeEnum.getByCode(work.getCoverType());
+        if (coverType == null) {
+            coverType = CoverTypeEnum.getDefault();
+        }
+        vo.setCoverType(coverType.getCode());
+        vo.setCoverTypeDesc(coverType.getDesc());
+        vo.setCoverWidthRatio(coverType.getWidthRatio());
+        vo.setCoverHeightRatio(coverType.getHeightRatio());
+        vo.setCoverAspectRatio(coverType.getAspectRatio());
+
+        return vo;
     }
 }

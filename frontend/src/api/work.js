@@ -62,3 +62,10 @@ export const getUserWorkStats = (userId) => {
     method: 'get'
   })
 }
+
+export const getUserStyleProfile = (userId) => {
+  return request({
+    url: `/works/user/${userId}/style-profile`,
+    method: 'get'
+  })
+}

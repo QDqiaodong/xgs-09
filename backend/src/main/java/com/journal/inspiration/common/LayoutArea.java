@@ -9,6 +9,14 @@ public class LayoutArea {
     private String alignSelf;
     private String justifySelf;
 
+    private Double areaRatio;
+    private String imageTextRelation;
+    private String textAlign;
+    private String textVerticalAlign;
+    private java.util.List<DecorativeElement> decorativeElements;
+    private String backgroundStyle;
+    private String borderStyle;
+
     public LayoutArea() {
     }
 
@@ -66,5 +74,61 @@ public class LayoutArea {
 
     public void setJustifySelf(String justifySelf) {
         this.justifySelf = justifySelf;
+    }
+
+    public Double getAreaRatio() {
+        return areaRatio;
+    }
+
+    public void setAreaRatio(Double areaRatio) {
+        this.areaRatio = areaRatio;
+    }
+
+    public String getImageTextRelation() {
+        return imageTextRelation;
+    }
+
+    public void setImageTextRelation(String imageTextRelation) {
+        this.imageTextRelation = imageTextRelation;
+    }
+
+    public String getTextAlign() {
+        return textAlign;
+    }
+
+    public void setTextAlign(String textAlign) {
+        this.textAlign = textAlign;
+    }
+
+    public String getTextVerticalAlign() {
+        return textVerticalAlign;
+    }
+
+    public void setTextVerticalAlign(String textVerticalAlign) {
+        this.textVerticalAlign = textVerticalAlign;
+    }
+
+    public java.util.List<DecorativeElement> getDecorativeElements() {
+        return decorativeElements;
+    }
+
+    public void setDecorativeElements(java.util.List<DecorativeElement> decorativeElements) {
+        this.decorativeElements = decorativeElements;
+    }
+
+    public String getBackgroundStyle() {
+        return backgroundStyle;
+    }
+
+    public void setBackgroundStyle(String backgroundStyle) {
+        this.backgroundStyle = backgroundStyle;
+    }
+
+    public String getBorderStyle() {
+        return borderStyle;
+    }
+
+    public void setBorderStyle(String borderStyle) {
+        this.borderStyle = borderStyle;
     }
 }

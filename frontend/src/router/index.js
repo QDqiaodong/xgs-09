@@ -26,6 +26,12 @@ const routes = [
     meta: { title: '个人中心' }
   },
   {
+    path: '/user/:id/style',
+    name: 'UserStyleProfile',
+    component: () => import('@/views/UserStyleProfile.vue'),
+    meta: { title: '排版风格' }
+  },
+  {
     path: '/category',
     name: 'Category',
     component: () => import('@/views/Category.vue'),
