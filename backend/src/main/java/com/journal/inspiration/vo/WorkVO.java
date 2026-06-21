@@ -35,6 +35,12 @@ public class WorkVO {
 
     private String layoutConfig;
 
+    private Long layoutTemplateId;
+
+    private String layoutTemplateName;
+
+    private String layoutTemplateCode;
+
     private String colorScheme;
 
     private String inspiration;

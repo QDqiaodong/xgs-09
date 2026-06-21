@@ -5,39 +5,33 @@ import lombok.Data;
 import java.time.LocalDateTime;
 
 @Data
-@TableName("journal_work")
-public class JournalWork {
+@TableName("layout_template")
+public class LayoutTemplate {
 
     @TableId(type = IdType.AUTO)
     private Long id;
 
-    private Long userId;
+    private String templateCode;
 
-    private String title;
+    private String templateName;
 
-    private String coverImage;
+    private String templateType;
 
-    private Integer coverType;
+    private String description;
 
-    private String content;
-
-    private String layoutIdea;
+    private String previewImage;
 
     private String layoutConfig;
 
-    private Long layoutTemplateId;
+    private String styleTags;
 
-    private String colorScheme;
+    private String sceneTags;
 
-    private String inspiration;
+    private Integer useCount;
 
-    private Integer viewCount;
+    private Integer isPreset;
 
-    private Integer likeCount;
-
-    private Integer favoriteCount;
-
-    private Integer status;
+    private Integer sort;
 
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;

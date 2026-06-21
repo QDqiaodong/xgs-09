@@ -28,6 +28,7 @@ CREATE TABLE journal_work (
   content TEXT,
   layout_idea TEXT,
   layout_config TEXT,
+  layout_template_id BIGINT COMMENT '关联的排版模板ID',
   color_scheme TEXT,
   inspiration TEXT,
   view_count INT DEFAULT 0,
@@ -39,7 +40,8 @@ CREATE TABLE journal_work (
   deleted TINYINT DEFAULT 0,
   INDEX idx_user_id (user_id),
   INDEX idx_status (status),
-  INDEX idx_create_time (create_time)
+  INDEX idx_create_time (create_time),
+  INDEX idx_layout_template_id (layout_template_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 DROP TABLE IF EXISTS category;
@@ -144,6 +146,42 @@ CREATE TABLE work_scene_task_check (
   INDEX idx_scene_category_id (scene_category_id),
   INDEX idx_user_id (user_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+DROP TABLE IF EXISTS scene_style_relation;
+CREATE TABLE scene_style_relation (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  scene_category_id BIGINT NOT NULL COMMENT '场景分类ID',
+  style_category_id BIGINT NOT NULL COMMENT '风格分类ID',
+  match_score INT DEFAULT 5 COMMENT '匹配度评分 1-10，越高越推荐',
+  is_primary TINYINT DEFAULT 0 COMMENT '是否为该场景的首选风格 1是 0否',
+  sort INT DEFAULT 0,
+  create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+  deleted TINYINT DEFAULT 0,
+  UNIQUE KEY uk_scene_style (scene_category_id, style_category_id),
+  INDEX idx_scene_category_id (scene_category_id),
+  INDEX idx_style_category_id (style_category_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='场景与风格关联表';
+
+DROP TABLE IF EXISTS layout_template;
+CREATE TABLE layout_template (
+  id BIGINT AUTO_INCREMENT PRIMARY KEY,
+  template_code VARCHAR(50) NOT NULL UNIQUE COMMENT '模板编码，如 twoColumnLeftImage',
+  template_name VARCHAR(100) NOT NULL COMMENT '模板名称，如 左图右文双栏',
+  template_type VARCHAR(20) NOT NULL COMMENT '模板类型：twoColumn双栏/collage拼贴/minimalist留白/bordered边框/timeline时间轴/centerFocus居中/magazine杂志风/natural自然',
+  description VARCHAR(500) COMMENT '模板描述',
+  preview_image VARCHAR(500) COMMENT '预览图URL',
+  layout_config TEXT NOT NULL COMMENT '布局配置JSON',
+  style_tags VARCHAR(255) COMMENT '适用风格标签，逗号分隔',
+  scene_tags VARCHAR(255) COMMENT '适用场景标签，逗号分隔',
+  use_count INT DEFAULT 0 COMMENT '使用次数',
+  is_preset TINYINT DEFAULT 1 COMMENT '是否系统预设 1是 0否',
+  sort INT DEFAULT 0,
+  create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
+  update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+  deleted TINYINT DEFAULT 0,
+  INDEX idx_template_type (template_type),
+  INDEX idx_is_preset (is_preset)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='排版模板档案表';
 
 SET FOREIGN_KEY_CHECKS = 1;
 
@@ -342,3 +380,77 @@ INSERT INTO color_palette (name, style_description, color_scheme, cover_color, c
 ('温暖圣诞红', '喜庆热烈的圣诞配色，温馨热闹，适合节日手账、冬季记录、庆祝主题',
  '[{"color":"#B22222","name":"圣诞红","purpose":"主色调，节日氛围","type":"primary"},{"color":"#228B22","name":"森林绿","purpose":"辅助色，经典搭配","type":"secondary"},{"color":"#FFD700","name":"金色","purpose":"点缀色，华丽装饰","type":"accent"},{"color":"#FFFAF0","name":"米白色","purpose":"背景色，干净温暖","type":"secondary"},{"color":"#8B4513","name":"深棕色","purpose":"松果等元素","type":"secondary"}]',
  '#B22222', '7,10', 22, 10);
+
+INSERT INTO scene_style_relation (scene_category_id, style_category_id, match_score, is_primary, sort) VALUES
+(9, 6, 9, 1, 1),
+(9, 1, 8, 0, 2),
+(9, 3, 7, 0, 3),
+(9, 4, 5, 0, 4),
+
+(10, 6, 10, 1, 1),
+(10, 3, 9, 0, 2),
+(10, 1, 8, 0, 3),
+(10, 8, 6, 0, 4),
+
+(11, 4, 9, 1, 1),
+(11, 1, 8, 0, 2),
+(11, 8, 7, 0, 3),
+(11, 6, 5, 0, 4),
+
+(12, 2, 9, 1, 1),
+(12, 5, 8, 0, 2),
+(12, 1, 6, 0, 3),
+(12, 8, 7, 0, 4),
+
+(13, 6, 8, 1, 1),
+(13, 4, 7, 0, 2),
+(13, 3, 9, 0, 3),
+(13, 1, 6, 0, 4),
+
+(14, 1, 9, 1, 1),
+(14, 8, 8, 0, 2),
+(14, 7, 7, 0, 3),
+(14, 2, 6, 0, 4),
+
+(15, 2, 10, 1, 1),
+(15, 5, 9, 0, 2),
+(15, 8, 7, 0, 3),
+(15, 7, 6, 0, 4),
+
+(16, 2, 8, 1, 1),
+(16, 5, 9, 0, 2),
+(16, 7, 7, 0, 3),
+(16, 8, 6, 0, 4);
+
+INSERT INTO layout_template (template_code, template_name, template_type, description, layout_config, style_tags, scene_tags, use_count, is_preset, sort) VALUES
+('twoColumnLeftImage', '左图右文双栏', 'twoColumn', '经典左图右文双栏布局，适合图文结合的记录方式，视觉平衡舒适',
+ '{"columns":2,"columnGap":"16px","rowGap":"12px","padding":"24px","whiteSpacePosition":"bottom","whiteSpaceSize":"60px","partitionMode":"fixed","partitionRatios":[0.4,0.6],"imageTextLayout":"left-image-right-text","layoutDirection":"vertical","gridStyle":"dashed","areas":[{"type":"image","label":"图片区","columnSpan":1,"rowSpan":2,"areaRatio":0.4,"imageTextRelation":"left-image-right-text"},{"type":"text","label":"主文字区","columnSpan":1,"rowSpan":1,"areaRatio":0.3,"imageTextRelation":"left-image-right-text","textAlign":"left","textVerticalAlign":"top"},{"type":"sticker","label":"装饰贴纸","columnSpan":1,"rowSpan":1,"stickerCount":4,"areaRatio":0.3,"decorativeElements":[{"elementType":"sticker","elementName":"装饰贴纸","quantity":4,"position":"corner"}]}]}',
+ 'ins风,复古风', '读书摘抄,旅行手账,日常记录', 128, 1, 1),
+
+('twoColumnRightImage', '左文右图双栏', 'twoColumn', '左文右图双栏布局，突出文字内容的同时配有配图点缀',
+ '{"columns":2,"columnGap":"16px","rowGap":"12px","padding":"24px","whiteSpacePosition":"top","whiteSpaceSize":"40px","partitionMode":"fixed","partitionRatios":[0.55,0.45],"imageTextLayout":"left-text-right-image","layoutDirection":"vertical","gridStyle":"solid","areas":[{"type":"text","label":"主文字区","columnSpan":1,"rowSpan":2,"areaRatio":0.55,"imageTextRelation":"left-text-right-image","textAlign":"left","textVerticalAlign":"top"},{"type":"image","label":"图片区","columnSpan":1,"rowSpan":1,"areaRatio":0.3,"imageTextRelation":"left-text-right-image"},{"type":"sticker","label":"贴纸区","columnSpan":1,"rowSpan":1,"stickerCount":3,"areaRatio":0.15,"decorativeElements":[{"elementType":"sticker","elementName":"贴纸","quantity":3,"position":"scattered"}]}]}',
+ '复古风,ins风', '观影心得,日常记录', 96, 1, 2),
+
+('timelineVertical', '纵向时间轴', 'timeline', '纵向时间轴布局，按时间顺序记录，条理清晰适合日程和打卡',
+ '{"columns":1,"columnGap":"0","rowGap":"16px","padding":"20px","whiteSpacePosition":"left","whiteSpaceSize":"30px","partitionMode":"flow","partitionRatios":[0.15,0.25,0.6],"imageTextLayout":"timeline","layoutDirection":"vertical","gridStyle":"dotted","areas":[{"type":"tape","label":"日期胶带","columnSpan":1,"rowSpan":1,"tapeCount":1,"areaRatio":0.05,"decorativeElements":[{"elementType":"tape","elementName":"日期胶带","quantity":1,"position":"top"}]},{"type":"handwriting","label":"标题手写字","columnSpan":1,"rowSpan":1,"areaRatio":0.15,"imageTextRelation":"timeline"},{"type":"sticker","label":"便签贴纸","columnSpan":1,"rowSpan":1,"stickerCount":3,"areaRatio":0.25,"decorativeElements":[{"elementType":"sticker","elementName":"便签贴纸","quantity":3,"position":"left"}]},{"type":"text","label":"记录区","columnSpan":1,"rowSpan":2,"areaRatio":0.6,"imageTextRelation":"timeline","textAlign":"left","textVerticalAlign":"top"},{"type":"stamp","label":"打卡印章","columnSpan":1,"rowSpan":1,"stampCount":2,"areaRatio":0.05,"decorativeElements":[{"elementType":"stamp","elementName":"打卡印章","quantity":2,"position":"corner"}]}]}',
+ '简约风,盐系', '工作计划,日常记录,习惯打卡', 156, 1, 3),
+
+('centerFocus', '居中聚焦', 'centerFocus', '居中聚焦布局，主内容在视觉中心，四周装饰环绕，适合主题突出的作品',
+ '{"columns":2,"columnGap":"12px","rowGap":"14px","padding":"28px","whiteSpacePosition":"around","whiteSpaceSize":"50px","partitionMode":"center","partitionRatios":[0.2,0.6,0.2],"imageTextLayout":"center-text-with-decoration","layoutDirection":"vertical","gridStyle":"double","areas":[{"type":"tape","label":"顶部装饰胶带","columnSpan":2,"rowSpan":1,"tapeCount":2,"areaRatio":0.1,"decorativeElements":[{"elementType":"tape","elementName":"装饰胶带","quantity":2,"position":"top"}]},{"type":"sticker","label":"顶部装饰","columnSpan":2,"rowSpan":1,"stickerCount":5,"areaRatio":0.15,"imageTextRelation":"center-text-with-decoration","decorativeElements":[{"elementType":"sticker","elementName":"装饰贴纸","quantity":5,"position":"scattered"}]},{"type":"handwriting","label":"手写字标题","columnSpan":2,"rowSpan":1,"areaRatio":0.1,"imageTextRelation":"center-text-with-decoration"},{"type":"text","label":"主内容区","columnSpan":2,"rowSpan":2,"areaRatio":0.4,"imageTextRelation":"center-text-with-decoration","textAlign":"center","textVerticalAlign":"middle"},{"type":"image","label":"配图区","columnSpan":1,"rowSpan":1,"areaRatio":0.15,"imageTextRelation":"center-text-with-decoration"},{"type":"sticker","label":"小贴纸","columnSpan":1,"rowSpan":1,"stickerCount":4,"areaRatio":0.15,"decorativeElements":[{"elementType":"sticker","elementName":"小贴纸","quantity":4,"position":"corner"}]},{"type":"stamp","label":"装饰印章","columnSpan":2,"rowSpan":1,"stampCount":3,"areaRatio":0.05,"decorativeElements":[{"elementType":"stamp","elementName":"装饰印章","quantity":3,"position":"bottom"}]}]}',
+ '可爱风,甜系', '节日主题,日常记录', 112, 1, 4),
+
+('collageStyle', '拼贴风', 'collage', '自由拼贴风格，多图多便签错落排列，营造丰富活泼的视觉效果',
+ '{"columns":3,"columnGap":"8px","rowGap":"8px","padding":"16px","whiteSpacePosition":"scattered","whiteSpaceSize":"20px","partitionMode":"masonry","partitionRatios":[0.3,0.35,0.35],"imageTextLayout":"mixed-collage","layoutDirection":"mixed","gridStyle":"none","areas":[{"type":"image","label":"照片1","columnSpan":1,"rowSpan":1,"areaRatio":0.2,"imageTextRelation":"mixed-collage"},{"type":"text","label":"文字","columnSpan":1,"rowSpan":1,"areaRatio":0.15,"imageTextRelation":"mixed-collage","textAlign":"left","textVerticalAlign":"top"},{"type":"sticker","label":"票根","columnSpan":1,"rowSpan":1,"stickerCount":2,"areaRatio":0.1,"decorativeElements":[{"elementType":"sticker","elementName":"票根贴纸","quantity":2,"position":"scattered"}]},{"type":"tape","label":"胶带装饰","columnSpan":2,"rowSpan":1,"tapeCount":2,"areaRatio":0.05,"decorativeElements":[{"elementType":"tape","elementName":"复古胶带","quantity":2,"position":"border"}]},{"type":"text","label":"记录","columnSpan":2,"rowSpan":1,"areaRatio":0.2,"imageTextRelation":"mixed-collage","textAlign":"left","textVerticalAlign":"top"},{"type":"image","label":"照片2","columnSpan":1,"rowSpan":2,"areaRatio":0.25,"imageTextRelation":"mixed-collage"},{"type":"sticker","label":"贴纸","columnSpan":2,"rowSpan":1,"stickerCount":4,"areaRatio":0.1,"decorativeElements":[{"elementType":"sticker","elementName":"纪念贴纸","quantity":4,"position":"scattered"}]},{"type":"stamp","label":"纪念印章","columnSpan":1,"rowSpan":1,"stampCount":2,"areaRatio":0.05,"decorativeElements":[{"elementType":"stamp","elementName":"景点印章","quantity":2,"position":"corner"}]},{"type":"handwriting","label":"手写备注","columnSpan":2,"rowSpan":1,"areaRatio":0.1,"imageTextRelation":"mixed-collage"}]}',
+ '复古风,森系', '旅行手账,美食记录', 188, 1, 5),
+
+('minimalist', '极简留白', 'minimalist', '极简留白风格，大面积空白配合精炼文字，干净高级有质感',
+ '{"columns":1,"columnGap":"0","rowGap":"20px","padding":"40px","whiteSpacePosition":"all-around","whiteSpaceSize":"80px","partitionMode":"minimal","partitionRatios":[0.15,0.75,0.1],"imageTextLayout":"text-only-with-minimal-decoration","layoutDirection":"vertical","gridStyle":"none","areas":[{"type":"text","label":"标题","columnSpan":1,"rowSpan":1,"areaRatio":0.15,"imageTextRelation":"text-only-with-minimal-decoration","textAlign":"left","textVerticalAlign":"top"},{"type":"handwriting","label":"手写日期","columnSpan":1,"rowSpan":1,"areaRatio":0.1,"imageTextRelation":"text-only-with-minimal-decoration"},{"type":"text","label":"正文","columnSpan":1,"rowSpan":3,"areaRatio":0.75,"imageTextRelation":"text-only-with-minimal-decoration","textAlign":"left","textVerticalAlign":"top"},{"type":"sticker","label":"小装饰","columnSpan":1,"rowSpan":1,"stickerCount":2,"areaRatio":0.05,"decorativeElements":[{"elementType":"sticker","elementName":"简约贴纸","quantity":2,"position":"corner"}]},{"type":"stamp","label":"日期印章","columnSpan":1,"rowSpan":1,"stampCount":1,"areaRatio":0.05,"decorativeElements":[{"elementType":"stamp","elementName":"日期印章","quantity":1,"position":"corner"}]}]}',
+ '简约风,盐系', '工作计划,读书摘抄,习惯打卡', 144, 1, 6),
+
+('naturalStyle', '自然森系', 'natural', '自然森系风格，不对称布局带有机感，配干花叶等自然元素装饰',
+ '{"columns":2,"columnGap":"20px","rowGap":"16px","padding":"24px","whiteSpacePosition":"organic","whiteSpaceSize":"50px","partitionMode":"asymmetric","partitionRatios":[0.45,0.55],"imageTextLayout":"left-nature-right-text","layoutDirection":"vertical","gridStyle":"wavy","areas":[{"type":"image","label":"干花区","columnSpan":1,"rowSpan":2,"areaRatio":0.45,"imageTextRelation":"left-nature-right-text"},{"type":"handwriting","label":"手写字","columnSpan":1,"rowSpan":1,"areaRatio":0.2,"imageTextRelation":"left-nature-right-text"},{"type":"text","label":"主文字","columnSpan":1,"rowSpan":1,"areaRatio":0.35,"imageTextRelation":"left-nature-right-text","textAlign":"left","textVerticalAlign":"top"},{"type":"sticker","label":"树叶装饰","columnSpan":1,"rowSpan":1,"stickerCount":3,"areaRatio":0.15,"decorativeElements":[{"elementType":"sticker","elementName":"树叶贴纸","quantity":3,"position":"scattered"}]},{"type":"tape","label":"纸胶带","columnSpan":2,"rowSpan":1,"tapeCount":2,"areaRatio":0.05,"decorativeElements":[{"elementType":"tape","elementName":"复古胶带","quantity":2,"position":"border"}]},{"type":"stamp","label":"植物印章","columnSpan":1,"rowSpan":1,"stampCount":2,"areaRatio":0.05,"decorativeElements":[{"elementType":"stamp","elementName":"植物印章","quantity":2,"position":"corner"}]}]}',
+ '森系,复古风', '旅行手账,日常记录,美食记录', 92, 1, 7),
+
+('threeColumnMagazine', '三栏杂志风', 'magazine', '三栏杂志风布局，类似时尚杂志的排版，大图配侧栏文字专业感强',
+ '{"columns":3,"columnGap":"10px","rowGap":"10px","padding":"20px","whiteSpacePosition":"editorial","whiteSpaceSize":"30px","partitionMode":"editorial","partitionRatios":[0.25,0.5,0.25],"imageTextLayout":"magazine-layout","layoutDirection":"mixed","gridStyle":"solid","areas":[{"type":"image","label":"大图","columnSpan":2,"rowSpan":2,"areaRatio":0.5,"imageTextRelation":"magazine-layout"},{"type":"text","label":"侧栏文字","columnSpan":1,"rowSpan":2,"areaRatio":0.25,"imageTextRelation":"magazine-layout","textAlign":"left","textVerticalAlign":"top"},{"type":"handwriting","label":"手写标题","columnSpan":2,"rowSpan":1,"areaRatio":0.2,"imageTextRelation":"magazine-layout"},{"type":"sticker","label":"装饰","columnSpan":1,"rowSpan":1,"stickerCount":3,"areaRatio":0.05,"decorativeElements":[{"elementType":"sticker","elementName":"装饰贴纸","quantity":3,"position":"scattered"}]},{"type":"tape","label":"侧边胶带","columnSpan":1,"rowSpan":1,"tapeCount":1,"areaRatio":0.05,"decorativeElements":[{"elementType":"tape","elementName":"侧边胶带","quantity":1,"position":"divider"}]},{"type":"stamp","label":"刊号印章","columnSpan":2,"rowSpan":1,"stampCount":2,"areaRatio":0.05,"decorativeElements":[{"elementType":"stamp","elementName":"刊号印章","quantity":2,"position":"corner"}]}]}',
+ '暗黑系,ins风', '习惯打卡,观影心得', 80, 1, 8);

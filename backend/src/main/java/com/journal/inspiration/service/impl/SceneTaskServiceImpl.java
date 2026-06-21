@@ -7,7 +7,9 @@ import com.journal.inspiration.entity.Category;
 import com.journal.inspiration.entity.SceneTask;
 import com.journal.inspiration.mapper.CategoryMapper;
 import com.journal.inspiration.mapper.SceneTaskMapper;
+import com.journal.inspiration.service.SceneStyleRelationService;
 import com.journal.inspiration.service.SceneTaskService;
+import com.journal.inspiration.vo.SceneStyleRelationVO;
 import com.journal.inspiration.vo.SceneTaskVO;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -20,6 +22,7 @@ import java.util.stream.Collectors;
 public class SceneTaskServiceImpl extends ServiceImpl<SceneTaskMapper, SceneTask> implements SceneTaskService {
 
     private final CategoryMapper categoryMapper;
+    private final SceneStyleRelationService sceneStyleRelationService;
 
     @Override
     public List<SceneTaskVO> getSceneTaskList(Long sceneCategoryId) {
@@ -30,6 +33,7 @@ public class SceneTaskServiceImpl extends ServiceImpl<SceneTaskMapper, SceneTask
         if (category == null || !"scene".equals(category.getType())) {
             return List.of();
         }
+        List<SceneStyleRelationVO> recommendedStyles = sceneStyleRelationService.getRelationsBySceneCategoryId(sceneCategoryId);
         LambdaQueryWrapper<SceneTask> wrapper = new LambdaQueryWrapper<>();
         wrapper.eq(SceneTask::getSceneCategoryId, sceneCategoryId);
         wrapper.orderByAsc(SceneTask::getSort);
@@ -38,6 +42,7 @@ public class SceneTaskServiceImpl extends ServiceImpl<SceneTaskMapper, SceneTask
                 .map(task -> {
                     SceneTaskVO vo = new SceneTaskVO();
                     BeanUtil.copyProperties(task, vo);
+                    vo.setRecommendedStyles(recommendedStyles);
                     return vo;
                 })
                 .collect(Collectors.toList());

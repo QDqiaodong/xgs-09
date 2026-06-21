@@ -25,6 +25,8 @@ public class WorkPublishDTO {
 
     private String layoutConfig;
 
+    private Long layoutTemplateId;
+
     private String colorScheme;
 
     private String inspiration;

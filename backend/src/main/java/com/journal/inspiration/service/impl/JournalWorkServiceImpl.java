@@ -61,6 +61,7 @@ public class JournalWorkServiceImpl extends ServiceImpl<JournalWorkMapper, Journ
     private final FavoriteService favoriteService;
     private final WorkElementMapper workElementMapper;
     private final WorkSceneTaskCheckService workSceneTaskCheckService;
+    private final LayoutTemplateService layoutTemplateService;
 
     @Override
     @Transactional(rollbackFor = Exception.class)
@@ -156,6 +157,10 @@ public class JournalWorkServiceImpl extends ServiceImpl<JournalWorkMapper, Journ
                     dto.getSceneCategoryId(),
                     dto.getCheckedSceneTaskIds()
             );
+        }
+
+        if (dto.getLayoutTemplateId() != null) {
+            layoutTemplateService.incrementUseCount(dto.getLayoutTemplateId());
         }
 
         return work.getId();
@@ -259,6 +264,12 @@ public class JournalWorkServiceImpl extends ServiceImpl<JournalWorkMapper, Journ
         if (dto.getInspiration() != null) {
             work.setInspiration(dto.getInspiration());
         }
+        if (dto.getLayoutTemplateId() != null) {
+            work.setLayoutTemplateId(dto.getLayoutTemplateId());
+        }
+
+        boolean templateChanged = dto.getLayoutTemplateId() != null
+                && !dto.getLayoutTemplateId().equals(existWork.getLayoutTemplateId());
 
         boolean updated = updateById(work);
         if (!updated) {
@@ -300,6 +311,10 @@ public class JournalWorkServiceImpl extends ServiceImpl<JournalWorkMapper, Journ
                     workElementMapper.insert(element);
                 }
             }
+        }
+
+        if (templateChanged && dto.getLayoutTemplateId() != null) {
+            layoutTemplateService.incrementUseCount(dto.getLayoutTemplateId());
         }
 
         return true;
@@ -945,6 +960,14 @@ public class JournalWorkServiceImpl extends ServiceImpl<JournalWorkMapper, Journ
         }
 
         vo.setElementGroups(getWorkElementGroups(work.getId()));
+
+        if (work.getLayoutTemplateId() != null) {
+            com.journal.inspiration.vo.LayoutTemplateVO layoutTemplateVO = layoutTemplateService.getTemplateById(work.getLayoutTemplateId());
+            if (layoutTemplateVO != null) {
+                vo.setLayoutTemplateName(layoutTemplateVO.getTemplateName());
+                vo.setLayoutTemplateCode(layoutTemplateVO.getTemplateCode());
+            }
+        }
 
         vo.setIsFavorite(false);
         return vo;

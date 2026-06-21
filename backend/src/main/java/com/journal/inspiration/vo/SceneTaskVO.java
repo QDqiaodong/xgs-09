@@ -1,6 +1,7 @@
 package com.journal.inspiration.vo;
 
 import lombok.Data;
+import java.util.List;
 
 @Data
 public class SceneTaskVO {
@@ -20,4 +21,6 @@ public class SceneTaskVO {
     private String icon;
 
     private Integer sort;
+
+    private List<SceneStyleRelationVO> recommendedStyles;
 }

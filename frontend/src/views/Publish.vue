@@ -34,24 +34,48 @@
             <el-form-item label="分类标签">
               <div class="category-section">
                 <div class="category-group">
-                  <span class="group-label">排版风格</span>
+                  <span class="group-label">应用场景</span>
                   <div class="category-chips">
                     <span 
-                      v-for="cat in styleCategories" 
+                      v-for="cat in sceneCategories" 
                       :key="cat.id"
                       class="chip"
                       :class="{ active: form.categoryIds.includes(cat.id) }"
                       @click="toggleCategory(cat.id)"
                     >
+                      <span class="chip-icon">{{ cat.icon }}</span>
                       {{ cat.name }}
                     </span>
                   </div>
                 </div>
+                <div class="recommended-styles-section" v-if="recommendedStyles.length > 0">
+                  <div class="recommend-header">
+                    <el-icon class="recommend-icon"><Star /></el-icon>
+                    <span class="recommend-title">为「{{ currentSceneCategoryName }}」推荐的风格</span>
+                    <span class="recommend-tip">点击可快速搭配</span>
+                  </div>
+                  <div class="recommended-styles">
+                    <span
+                      v-for="style in recommendedStyles"
+                      :key="style.styleCategoryId"
+                      class="style-recommend-card"
+                      :class="{ active: form.categoryIds.includes(style.styleCategoryId), primary: style.isPrimary === 1 }"
+                      @click="toggleCategory(style.styleCategoryId)"
+                    >
+                      <span class="style-name">{{ style.styleCategoryName }}</span>
+                      <span class="match-score">
+                        <el-icon><Star /></el-icon>
+                        {{ style.matchScore }}分
+                      </span>
+                      <span v-if="style.isPrimary === 1" class="primary-tag">首选</span>
+                    </span>
+                  </div>
+                </div>
                 <div class="category-group">
-                  <span class="group-label">应用场景</span>
+                  <span class="group-label">排版风格</span>
                   <div class="category-chips">
                     <span 
-                      v-for="cat in sceneCategories" 
+                      v-for="cat in styleCategories" 
                       :key="cat.id"
                       class="chip"
                       :class="{ active: form.categoryIds.includes(cat.id) }"
@@ -101,6 +125,27 @@
                 </div>
               </div>
             </div>
+          </div>
+        </section>
+
+        <section class="form-section">
+          <div class="section-header">
+            <div class="section-icon icon-template">
+              <el-icon><Grid /></el-icon>
+            </div>
+            <div class="section-title-wrap">
+              <h2 class="section-title">排版模板档案</h2>
+              <p class="section-desc">选择预设的排版布局模板，快速确定手账结构</p>
+            </div>
+          </div>
+          <div class="section-body">
+            <el-form-item label="选择模板">
+              <LayoutTemplateSelector 
+                v-model="form.layoutTemplateId" 
+                :category-ids="form.categoryIds"
+                @select="handleTemplateSelect"
+              />
+            </el-form-item>
           </div>
         </section>
 
@@ -457,13 +502,15 @@
 import { ref, reactive, onMounted, computed, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { ElMessage } from 'element-plus'
-import { Plus, Close, Check, Warning, InfoFilled, Document, Grid, Brush, MagicStick, Picture, List } from '@element-plus/icons-vue'
+import { Plus, Close, Check, Warning, InfoFilled, Document, Grid, Brush, MagicStick, Picture, List, Star } from '@element-plus/icons-vue'
 import Header from '@/components/Header.vue'
 import LayoutGridPreviewer from '@/components/LayoutGridPreviewer.vue'
+import LayoutTemplateSelector from '@/components/LayoutTemplateSelector.vue'
 import { publishWork } from '@/api/work'
 import { getCategoryList } from '@/api/category'
 import { getColorPaletteList, useColorPalette } from '@/api/colorPalette'
 import { getSceneTaskList } from '@/api/scene'
+import { getSceneStyleRelationsByScene } from '@/api/sceneStyleRelation'
 import { COVER_TYPE_LIST, DEFAULT_COVER_TYPE, getCoverTypeByCode } from '@/constants/coverTypes'
 import { getDefaultLayout } from '@/constants/layoutTemplates'
 
@@ -478,6 +525,7 @@ const selectedPaletteId = ref(null)
 const selectedPalette = ref(null)
 const sceneTaskList = ref([])
 const checkedSceneTaskIds = ref([])
+const recommendedStyles = ref([])
 
 const MAX_PRIMARY = 2
 const MAX_SECONDARY = 4
@@ -517,7 +565,8 @@ const form = reactive({
   layoutConfig: '',
   colorScheme: '',
   inspiration: '',
-  categoryIds: []
+  categoryIds: [],
+  layoutTemplateId: null
 })
 
 const selectedCategories = computed(() => {
@@ -816,6 +865,30 @@ const toggleCategory = (id) => {
   } else {
     form.categoryIds.push(id)
   }
+  loadRecommendedStyles()
+}
+
+const loadRecommendedStyles = async () => {
+  const sceneCat = selectedCategories.value.find(cat => cat.type === 'scene')
+  if (sceneCat) {
+    try {
+      const res = await getSceneStyleRelationsByScene(sceneCat.id)
+      recommendedStyles.value = res.data || []
+    } catch (e) {
+      console.error('加载推荐风格失败', e)
+      recommendedStyles.value = []
+    }
+  } else {
+    recommendedStyles.value = []
+  }
+}
+
+const handleTemplateSelect = (template) => {
+  if (template && template.layoutConfig) {
+    form.layoutConfig = typeof template.layoutConfig === 'string'
+      ? template.layoutConfig
+      : JSON.stringify(template.layoutConfig)
+  }
 }
 
 const uploadImage = () => {
@@ -934,6 +1007,10 @@ onMounted(() => {
 
 .icon-layout {
   background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%);
+}
+
+.icon-template {
+  background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
 }
 
 .icon-color {
@@ -1175,6 +1252,110 @@ onMounted(() => {
   background: linear-gradient(135deg, #ff9a9e 0%, #fecfef 100%);
   border-color: transparent;
   color: #fff;
+}
+
+.chip-icon {
+  margin-right: 4px;
+  font-size: 12px;
+}
+
+.recommended-styles-section {
+  background: linear-gradient(135deg, #fff9e6 0%, #fff5f8 100%);
+  border: 1px solid #ffe4a0;
+  border-radius: 10px;
+  padding: 14px 16px;
+  margin-left: 96px;
+}
+
+.recommend-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-bottom: 10px;
+  flex-wrap: wrap;
+}
+
+.recommend-icon {
+  color: #ffb347;
+  font-size: 16px;
+}
+
+.recommend-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: #333;
+}
+
+.recommend-tip {
+  font-size: 12px;
+  color: #999;
+  margin-left: auto;
+}
+
+.recommended-styles {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.style-recommend-card {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: #fff;
+  border: 2px solid #eee;
+  border-radius: 20px;
+  cursor: pointer;
+  transition: all 0.3s;
+  font-size: 13px;
+}
+
+.style-recommend-card:hover {
+  border-color: #ffc8dd;
+  transform: translateY(-1px);
+}
+
+.style-recommend-card.active {
+  border-color: #ff6b9d;
+  background: linear-gradient(135deg, #fff5f8 0%, #ffe8f0 100%);
+}
+
+.style-recommend-card.primary {
+  border-color: #ffd93d;
+  background: linear-gradient(135deg, #fffbe6 0%, #fff9e6 100%);
+}
+
+.style-recommend-card.primary.active {
+  border-color: #ff6b9d;
+  background: linear-gradient(135deg, #fff5f8 0%, #ffe8f0 100%);
+}
+
+.style-name {
+  font-weight: 600;
+  color: #333;
+}
+
+.match-score {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  font-size: 11px;
+  color: #ffb347;
+  font-weight: 600;
+}
+
+.match-score .el-icon {
+  font-size: 11px;
+}
+
+.primary-tag {
+  padding: 1px 8px;
+  background: linear-gradient(135deg, #ffd93d 0%, #ffb347 100%);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  border-radius: 10px;
 }
 
 .color-scheme-editor {
